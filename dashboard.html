@@ -3,13 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Magasins — Outil Rudy</title>
+<title>Liste des magasins</title>
 
 <link rel="stylesheet" href="styles.css">
-
-<!-- Icônes PRO -->
-<link rel="stylesheet" 
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 </head>
 
@@ -23,45 +20,32 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     </button>
 </header>
 
-<!-- BARRE D’OUTILS -->
 <div class="toolbar">
-
-    <input id="search" type="text" placeholder="Rechercher…" 
-           onkeyup="searchMagasins()">
-
+    <input id="search" type="text" placeholder="Rechercher…" onkeyup="searchMagasins()">
     <button class="btn-primary" onclick="goAdd()">
         <i class="fa-solid fa-plus"></i> Ajouter
     </button>
-
     <button class="btn-primary" onclick="clearCache()">
         <i class="fa-solid fa-broom"></i> Vider cache
     </button>
 </div>
 
-<!-- TABLEAU MAGASINS -->
 <table class="magasins-table">
     <thead>
         <tr>
             <th>Code</th>
             <th>Visité</th>
-            <th>Nom</th>
+            <th>Nom complet</th>
             <th>Type</th>
-            <th>Adresse</th>
-            <th>Ville</th>
+            <th>Adresse complète</th>
             <th>KM</th>
             <th>Actions</th>
         </tr>
     </thead>
-
     <tbody></tbody>
 </table>
 
-<!-- SCRIPTS -->
-
-<!-- Login / Session -->
-<script src="auth.js?v=2"></script>
-
-<!-- ⭐ LOGIQUE FRONT-END (API Worker + dashboard) -->
+<script src="auth.js?v=1"></script>
 <script src="app.js?v=1"></script>
 
 </body>
