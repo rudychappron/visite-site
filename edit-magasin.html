@@ -18,47 +18,46 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
 <header class="header">
     <h1>Modifier le magasin</h1>
 
-    <div>
-        <button class="logout-btn" onclick="logout()">
-            <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
-        </button>
-    </div>
+    <button class="logout-btn" onclick="logout()">
+        <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+    </button>
 </header>
 
 <div class="form-container">
+
     <div class="form">
 
-        <label>Code magasin</label>
+        <label for="code">Code magasin</label>
         <input id="code" disabled>
 
-        <label>Nom</label>
+        <label for="nom">Nom</label>
         <input id="nom">
 
-        <label>Type</label>
+        <label for="type">Type</label>
         <input id="type">
 
-        <label>Adresse</label>
+        <label for="adresse">Adresse</label>
         <input id="adresse">
 
-        <label>Code postal</label>
+        <label for="cp">Code postal</label>
         <input id="cp">
 
-        <label>Ville</label>
+        <label for="ville">Ville</label>
         <input id="ville">
 
         <button class="btn-primary" onclick="saveEdit()">
             <i class="fa-solid fa-floppy-disk"></i> Sauvegarder
         </button>
 
-        <button class="btn-primary" style="background:#555;margin-top:10px" onclick="location.href='dashboard.html'">
+        <button class="btn-secondary" onclick="location.href='dashboard.html'">
             <i class="fa-solid fa-arrow-left"></i> Retour
         </button>
 
     </div>
 </div>
 
-<script src="auth.js"></script>
-<script src="app.js"></script>
+<script src="auth.js?v=1"></script>
+<script src="app.js?v=1"></script>
 
 </body>
 </html>
