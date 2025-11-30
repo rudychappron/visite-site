@@ -49,7 +49,7 @@ async function deleteMagasin(code) {
 
 
 // =========================
-// RENDER TABLE (route réelle ORS)
+// RENDER TABLE (route ORS)
 // =========================
 async function loadMagasins() {
     const magasins = await getMagasins();
@@ -76,7 +76,7 @@ async function loadMagasins() {
         const adresseComplete = `${adresse} ${cp} ${ville}`.trim();
 
         // =============================
-        // DISTANCE ROUTIÈRE (ORS)
+        // DISTANCE ROUTIÈRE ORS
         // =============================
         let distance = "-";
 
@@ -89,7 +89,9 @@ async function loadMagasins() {
             );
         }
 
-        // URL Waze
+        // =============================
+        // WAZE — VRAI LOGO OFFICIEL
+        // =============================
         const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 
         const tr = document.createElement("tr");
@@ -102,16 +104,9 @@ async function loadMagasins() {
 
             <td>
                 <a class="waze-btn" href="${wazeUrl}" target="_blank">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-                        <rect width="512" height="512" rx="20" fill="#33CCFF"/>
-                        <path fill="#FFFFFF" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"
-                            d="M256 120c-75 0-136 61-136 136 0 35 12 68 33 93l-10 40h52l-4-25c19 7 39 11 61 11s42-4 61-11l-4 25h52l-10-40c21-25 33-58 33-93 0-75-61-136-136-136z"/>
-                        <circle cx="205" cy="250" r="22" fill="#000"/>
-                        <circle cx="307" cy="250" r="22" fill="#000"/>
-                        <path d="M205 320c18 20 46 30 75 30s57-10 75-30" stroke="#000" stroke-width="18" fill="none" stroke-linecap="round"/>
-                        <circle cx="180" cy="360" r="30" fill="#000"/>
-                        <circle cx="330" cy="360" r="30" fill="#000"/>
-                    </svg>
+                    <img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg"
+                         alt="Waze"
+                         style="width:30px; height:30px;">
                 </a>
             </td>
 
