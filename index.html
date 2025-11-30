@@ -1,26 +1,42 @@
+// HASH SHA-256 correct du mot de passe Chappron1992
+const HASH = "91f9d5e7e7730f83b8a7a830180ba893bb8e2ad067361e5b1862f08e5ad96507";
 
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Connexion — Bigben Outil Rudy</title>
-<link rel="stylesheet" href="styles.css">
-</head>
+// Fonction hash
+async function sha256(str) {
+  const buf = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(str)
+  );
 
-<body class="login-body">
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
-<div class="login-card">
-    <h2>Connexion</h2>
+// Connexion
+async function login() {
+  const u = document.getElementById("user").value.trim();
+  const p = document.getElementById("pass").value.trim();
 
-    <input id="user" type="text" placeholder="Identifiant">
-    <input id="pass" type="password" placeholder="Mot de passe">
+  const h = await sha256(p);
 
-    <button onclick="login()">Se connecter</button>
+  if (u === "rudy" && h === HASH) {
+    localStorage.setItem("session", "ok");
+    location.href = "dashboard.html";
+  } else {
+    document.getElementById("login-error").innerText = "❌ Identifiants incorrects";
+  }
+}
 
-    <p id="login-error"></p>
-</div>
+// Déconnexion
+function logout() {
+  localStorage.removeItem("session");
+  location.href = "index.html";
+}
 
-<script src="auth2.js?v=999999"></script>
-</body>
-</html>
+// Vérification auto
+if (!location.href.includes("index.html")) {
+  if (localStorage.getItem("session") !== "ok") {
+    location.href = "index.html";
+  }
+}
