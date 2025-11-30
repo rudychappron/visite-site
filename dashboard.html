@@ -21,13 +21,22 @@
 </header>
 
 <div class="toolbar">
+
     <input id="search" type="text" placeholder="Rechercher…" onkeyup="searchMagasins()">
+
     <button class="btn-primary" onclick="goAdd()">
         <i class="fa-solid fa-plus"></i> Ajouter
     </button>
+
     <button class="btn-primary" onclick="clearCache()">
         <i class="fa-solid fa-broom"></i> Vider cache
     </button>
+
+    <!-- 🔄 NOUVEAU : bouton rafraîchir position -->
+    <button class="btn-primary" onclick="refreshPosition()">
+        🔄 Rafraîchir position
+    </button>
+
 </div>
 
 <table class="magasins-table">
