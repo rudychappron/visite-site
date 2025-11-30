@@ -4,6 +4,7 @@
 
 const API = "https://winter-bar-234b.rudychappron.workers.dev";
 
+
 // =========================
 // POSITION GPS UTILISATEUR
 // =========================
@@ -17,6 +18,7 @@ navigator.geolocation.getCurrentPosition(
     },
     () => console.warn("GPS refusé → distance impossible")
 );
+
 
 // =========================
 // CALCUL DISTANCE
@@ -37,17 +39,36 @@ function calculDistance(lat, lng) {
     return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
+
 // =========================
 // GET — lire magasins
 // =========================
 async function getMagasins() {
     const res = await fetch(`${API}/get`, { method: "GET" });
-    const json = await res.json();
 
-    console.log("Réponse API :", json);
+    let json;
+    try {
+        json = await res.json();
+    } catch (e) {
+        console.error("❌ Impossible de lire la réponse Worker :", e);
+        return [];
+    }
 
-    return json.data; // IMPORTANT
+    console.log("Réponse API brute :", json);
+
+    // Ton Worker renvoie DIRECTEMENT un tableau de lignes
+    if (Array.isArray(json)) {
+        return json;
+    }
+
+    // Si ton Apps Script est modifié plus tard
+    if (json.data) {
+        return json.data;
+    }
+
+    return [];
 }
+
 
 // =========================
 // DELETE
@@ -62,30 +83,34 @@ async function deleteMagasin(code) {
     loadMagasins();
 }
 
+
 // =========================
 // RENDER TABLE
 // =========================
 async function loadMagasins() {
     const magasins = await getMagasins();
-    if (!magasins) return;
+    if (!magasins || magasins.length === 0) {
+        console.warn("⚠ Aucun magasin reçu !");
+        return;
+    }
 
     const tbody = document.querySelector("tbody");
     tbody.innerHTML = "";
 
+    // on saute la première ligne (en-têtes)
     magasins.slice(1).forEach(row => {
 
-        const code = row[0];
-        const fait = row[1];
-        const nomComplet = row[2];
-        const type = row[3];
-        const nomCourt = row[4];
-        const adresse = row[5];
-        const cp = row[6];
-        const ville = row[7];
-        const lat = row[11];
-        const lng = row[12];
+        const code = row[0] ?? "";
+        const fait = row[1] ?? false;
+        const nomComplet = row[2] ?? "";
+        const type = row[3] ?? "";
+        const adresse = row[5] ?? "";
+        const cp = row[6] ?? "";
+        const ville = row[7] ?? "";
+        const lat = row[11] ?? null;
+        const lng = row[12] ?? null;
 
-        const adresseComplete = `${adresse}, ${cp} ${ville}`;
+        const adresseComplete = `${adresse} ${cp} ${ville}`.trim();
         const distance = calculDistance(lat, lng);
 
         const tr = document.createElement("tr");
@@ -106,6 +131,10 @@ async function loadMagasins() {
     });
 }
 
+
+// =========================
+// NAVIGATION
+// =========================
 function editMagasin(code) {
     window.location.href = `edit-magasin.html?code=${code}`;
 }
@@ -114,4 +143,9 @@ function goAdd() {
     window.location.href = "add-magasin.html";
 }
 
+
+// =========================
+// CHARGEMENT AUTO
+// =========================
 loadMagasins();
+
