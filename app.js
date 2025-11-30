@@ -12,6 +12,35 @@ window.userLng = null;
 
 
 // =========================
+// NORMALISATION D’ADRESSE (OSM)
+// =========================
+async function normalizeAddress(adresse, cp, ville) {
+    const full = `${adresse}, ${cp} ${ville}`;
+
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(full)}`;
+
+    try {
+        const res = await fetch(url, {
+            headers: {
+                "User-Agent": "RudyApp/1.0"
+            }
+        });
+
+        const data = await res.json();
+
+        if (!data || data.length === 0) return full;
+
+        const item = data[0];
+
+        return item.display_name; // adresse officielle
+    } catch (e) {
+        console.warn("Adresse non normalisée :", e);
+        return full;
+    }
+}
+
+
+// =========================
 // GET — lire magasins
 // =========================
 async function getMagasins() {
@@ -73,7 +102,11 @@ async function loadMagasins() {
         const lat = row[11] ?? null;
         const lng = row[12] ?? null;
 
-        const adresseComplete = `${adresse} ${cp} ${ville}`.trim();
+        // Adresse brute
+        const adresseBrute = `${adresse} ${cp} ${ville}`.trim();
+
+        // Adresse normalisée OSM
+        let adresseComplete = await normalizeAddress(adresse, cp, ville);
 
         // =============================
         // DISTANCE ROUTIÈRE ORS
