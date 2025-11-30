@@ -7,10 +7,8 @@ const API = "https://winter-bar-234b.rudychappron.workers.dev";
 window.userLat = null;
 window.userLng = null;
 
-// Pour éviter de lancer 50 recalculs d’un coup
 let gpsReady = false;
 let gpsUpdating = false;
-
 let modeProximite = true;
 
 
@@ -18,7 +16,9 @@ let modeProximite = true;
 // 🔥 HAVERSINE – Distance "à vol d’oiseau"
 // =======================================
 function haversine(lat1, lon1, lat2, lon2) {
-    const R = 6371; 
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 99999;
+
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
 
@@ -28,14 +28,13 @@ function haversine(lat1, lon1, lat2, lon2) {
         Math.cos(lat2 * Math.PI / 180) *
         Math.sin(dLon / 2) ** 2;
 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 
-// ============================
-// ORS - Distance + Durée via Worker
-// ============================
+// =======================================
+// 🛣️ ORS Distance + Durée via Worker
+// =======================================
 async function getRouteDistance(lat1, lng1, lat2, lng2) {
     try {
         const res = await fetch(`${API}/ors`, {
@@ -50,6 +49,7 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
         });
 
         if (!res.ok) return null;
+
         const json = await res.json();
         if (!json.routes || !json.routes[0]) return null;
 
@@ -62,56 +62,56 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
         const h = Math.floor(min / 60);
         const m = min % 60;
 
-        const duree = h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m} min`;
+        const duree = h > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${m} min`;
 
         return { km, duree };
 
-    } catch {
+    } catch (e) {
+        console.warn("Erreur ORS:", e);
         return null;
     }
 }
 
 
-// ============================
-// Normalisation adresse via /geo
-// ============================
+// =======================================
+// 📍 Normalisation adresse via Worker GEO
+// =======================================
 async function normalizeAddress(adresse, cp, ville) {
-    const full = `${adresse}, ${cp} ${ville}`;
-
+    const query = `${adresse}, ${cp} ${ville}`;
     try {
         const res = await fetch(`${API}/geo`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query: full })
+            body: JSON.stringify({ query })
         });
 
         const json = await res.json();
         if (json && json.length > 0) return json[0].display_name;
 
-        return full;
+        return query;
     } catch {
-        return full;
+        return query;
     }
 }
 
 
-// =========================
-// GET magasins
-// =========================
+// =======================================
+// 🧾 GET magasins
+// =======================================
 async function getMagasins() {
     try {
         const res = await fetch(`${API}/get`);
         const json = await res.json();
-        return json.data || json;
+        return json.data || [];
     } catch {
         return [];
     }
 }
 
 
-// =========================
-// DELETE magasin
-// =========================
+// =======================================
+// ❌ DELETE magasin
+// =======================================
 async function deleteMagasin(code) {
     await fetch(`${API}/delete`, {
         method: "POST",
@@ -122,11 +122,10 @@ async function deleteMagasin(code) {
 }
 
 
-// =========================
-// Toggle VISITE
-// =========================
+// =======================================
+// ☑️ Toggle VISITE
+// =======================================
 async function toggleVisite(code, checkboxElement) {
-
     const newState = checkboxElement.checked;
 
     if (!confirm(newState ? "Marquer VISITÉ ?" : "Marquer NON VISITÉ ?")) {
@@ -142,47 +141,41 @@ async function toggleVisite(code, checkboxElement) {
 }
 
 
-// =========================
-// AFFICHAGE TABLEAU
-// =========================
+// =======================================
+// 🖥️ AFFICHAGE TABLEAU
+// =======================================
 async function loadMagasins() {
 
     const magasins = await getMagasins();
     const tbody = document.querySelector("tbody");
     tbody.innerHTML = "";
 
-    let list = magasins.slice(1).map(row => {
+    let list = magasins.slice(1).map(row => ({
+        row,
+        lat: Number(row[11]),
+        lng: Number(row[12]),
+        dist: (window.userLat ? haversine(window.userLat, window.userLng, row[11], row[12]) : 99999)
+    }));
 
-        // ⚠ lat = col 11, lng = col 12
-        const lat = row[11];
-        const lng = row[12];
-
-        return {
-            row,
-            lat,
-            lng,
-            dist: (window.userLat ? haversine(window.userLat, window.userLng, lat, lng) : 99999)
-        };
-    });
-
-    list.sort((a,b) => a.dist - b.dist);
-
-    const toDisplay = modeProximite ? list.slice(0,5) : list;
+    list.sort((a, b) => a.dist - b.dist);
+    const toDisplay = modeProximite ? list.slice(0, 5) : list;
 
     for (const item of toDisplay) {
 
         const row = item.row;
+
         const code = row[0];
         const fait = row[1] === true || row[1] === "TRUE";
         const nomComplet = row[2];
         const type = row[3];
         const adresse = row[5];
-        const cp = String(row[6]).padStart(5,"0");
+        const cp = String(row[6]).padStart(5, "0");
         const ville = row[7];
 
         const lat = item.lat;
         const lng = item.lng;
 
+        // Calcul KM + Temps
         let kmTxt = "-";
         let tempsTxt = "-";
 
@@ -195,7 +188,6 @@ async function loadMagasins() {
         }
 
         const adresseComplete = await normalizeAddress(adresse, cp, ville);
-
         const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 
         const tr = document.createElement("tr");
@@ -209,7 +201,10 @@ async function loadMagasins() {
             <td><a href="${wazeUrl}" target="_blank"><img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg" style="width:30px;height:30px;"></a></td>
             <td>${kmTxt}</td>
             <td>${tempsTxt}</td>
-            <td><button onclick="editMagasin('${code}')">✏️</button><button onclick="deleteMagasin('${code}')">🗑</button></td>
+            <td>
+                <button onclick="editMagasin('${code}')">✏️</button>
+                <button onclick="deleteMagasin('${code}')">🗑</button>
+            </td>
         `;
 
         tbody.appendChild(tr);
@@ -217,9 +212,9 @@ async function loadMagasins() {
 }
 
 
-// =========================
-// GPS TEMPS RÉEL — watchPosition
-// =========================
+// =======================================
+// 📡 GPS TEMPS RÉEL
+// =======================================
 navigator.geolocation.watchPosition(
     pos => {
         window.userLat = pos.coords.latitude;
@@ -232,20 +227,27 @@ navigator.geolocation.watchPosition(
             loadMagasins().then(() => gpsUpdating = false);
         }
     },
-    err => console.warn("GPS refusé", err),
+    err => console.warn("GPS refusé:", err),
     { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
 );
 
 
-// =========================
+// =======================================
 // Navigation
-// =========================
-function editMagasin(code) { location.href = `edit-magasin.html?code=${code}`; }
-function goAdd() { location.href = "add-magasin.html"; }
-function toggleView() { modeProximite = !modeProximite; loadMagasins(); }
+// =======================================
+function editMagasin(code) {
+    location.href = `edit-magasin.html?code=${code}`;
+}
+function goAdd() {
+    location.href = "add-magasin.html";
+}
+function toggleView() {
+    modeProximite = !modeProximite;
+    loadMagasins();
+}
 
 
-// =========================
-// Premier affichage
-// =========================
+// =======================================
+// 🟢 Premier affichage
+// =======================================
 loadMagasins();
