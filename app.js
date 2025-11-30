@@ -33,38 +33,45 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 
 // ============================
-// ORS - Distance + Durée
+// ORS - Distance + Durée (via Worker sécurisé)
 // ============================
 async function getRouteDistance(lat1, lng1, lat2, lng2) {
     try {
-        const res = await fetch("https://api.openrouteservice.org/v2/directions/driving-car", {
+        const res = await fetch(`${API}/ors`, {
             method: "POST",
-            headers: {
-                "Authorization": ORS_API_KEY,
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 coordinates: [
-                    [lng1, lat1],
-                    [lng2, lat2]
+                    [lng1, lat1],  // départ
+                    [lng2, lat2]   // arrivée
                 ]
             })
         });
 
+        if (!res.ok) {
+            console.warn("❌ Worker ORS error:", res.status);
+            return null;
+        }
+
         const json = await res.json();
+
         if (!json.routes || !json.routes[0]) return null;
 
-        const km = (json.routes[0].summary.distance / 1000).toFixed(1) + " km";
+        const meters = json.routes[0].summary.distance;
+        const seconds = json.routes[0].summary.duration;
 
-        const sec = json.routes[0].summary.duration;
-        const min = Math.round(sec / 60);
+        const km = (meters / 1000).toFixed(1) + " km";
+
+        const min = Math.round(seconds / 60);
         const h = Math.floor(min / 60);
         const m = min % 60;
 
-        const duree = h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m} min`;
+        const duree = (h > 0) ? `${h}h${String(m).padStart(2, '0')}` : `${m} min`;
 
         return { km, duree };
-    } catch {
+
+    } catch (err) {
+        console.error("❌ Erreur distance via Worker :", err);
         return null;
     }
 }
