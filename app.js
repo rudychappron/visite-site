@@ -24,7 +24,7 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 coordinates: [
-                    [lng1, lat1], 
+                    [lng1, lat1],
                     [lng2, lat2]
                 ]
             })
@@ -37,6 +37,7 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
         const seconds = json.routes[0].summary.duration;
 
         const km = (meters / 1000).toFixed(1) + " km";
+
         const min = Math.round(seconds / 60);
         const h = Math.floor(min / 60);
         const m = min % 60;
@@ -44,7 +45,8 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
 
         return { km, duree };
 
-    } catch {
+    } catch (err) {
+        console.log("ORS ERROR:", err);
         return null;
     }
 }
@@ -63,10 +65,7 @@ async function normalizeAddress(adresse, cp, ville) {
         });
 
         const json = await res.json();
-
-        if (json && json.length > 0) {
-            return json[0].display_name;
-        }
+        if (json && json.length > 0) return json[0].display_name;
 
         return full;
     } catch {
@@ -130,10 +129,8 @@ async function loadMagasins() {
     tbody.innerHTML = "";
 
     let list = magasins.slice(1).map(row => {
-
-        // ⚠ CORRECTION : lat = row[12], lng = row[11]
-        const lng = row[11]; 
-        const lat = row[12];
+        const lat = row[11];
+        const lng = row[12];
 
         return {
             row,
@@ -156,13 +153,15 @@ async function loadMagasins() {
         const adresse = row[5];
         const cp = String(row[6]).padStart(5, "0");
         const ville = row[7];
+
         const lat = item.lat;
         const lng = item.lng;
 
+        // KM + TEMPS (PROPRE)
         let kmTxt = "-";
         let tempsTxt = "-";
 
-        if (gpsReady && lat && lng) {
+        if (lat && lng && window.userLat && window.userLng) {
             const info = await getRouteDistance(window.userLat, window.userLng, lat, lng);
             if (info) {
                 kmTxt = info.km;
@@ -171,7 +170,6 @@ async function loadMagasins() {
         }
 
         const adresseComplete = await normalizeAddress(adresse, cp, ville);
-
         const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 
         const tr = document.createElement("tr");
@@ -184,7 +182,10 @@ async function loadMagasins() {
             <td><a href="${wazeUrl}" target="_blank"><img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg" style="width:30px;height:30px;"></a></td>
             <td>${kmTxt}</td>
             <td>${tempsTxt}</td>
-            <td><button onclick="editMagasin('${code}')">✏️</button><button onclick="deleteMagasin('${code}')">🗑</button></td>
+            <td>
+                <button onclick="editMagasin('${code}')">✏️</button>
+                <button onclick="deleteMagasin('${code}')">🗑</button>
+            </td>
         `;
         tbody.appendChild(tr);
     }
@@ -196,25 +197,17 @@ async function loadMagasins() {
 // =========================
 navigator.geolocation.watchPosition(
     pos => {
-
         window.userLat = pos.coords.latitude;
         window.userLng = pos.coords.longitude;
 
-        console.log("📍 GPS mis à jour:", window.userLat, window.userLng);
-
         gpsReady = true;
 
-        // Mise à jour du tableau sans recharger la page
         if (!gpsUpdating) {
             gpsUpdating = true;
-            loadMagasins().then(() => {
-                gpsUpdating = false;
-            });
+            loadMagasins().then(() => gpsUpdating = false);
         }
     },
-    err => {
-        console.warn("GPS refusé:", err);
-    },
+    err => console.warn("GPS refusé:", err),
     { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
 );
 
@@ -225,7 +218,6 @@ navigator.geolocation.watchPosition(
 function editMagasin(code) { location.href = `edit-magasin.html?code=${code}`; }
 function goAdd() { location.href = "add-magasin.html"; }
 
-
 function toggleView() {
     modeProximite = !modeProximite;
     loadMagasins();
@@ -233,6 +225,6 @@ function toggleView() {
 
 
 // =========================
-// 1er affichage immédiat
+// Premier affichage
 // =========================
-loadMagasins();   // on affiche DIRECT
+loadMagasins();
