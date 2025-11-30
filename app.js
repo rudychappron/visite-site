@@ -78,6 +78,27 @@ async function deleteMagasin(code) {
 
 
 // =========================
+// UPDATE VISITE magasin
+// =========================
+async function toggleVisite(code, visited) {
+    try {
+        await fetch(`${API}/update`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                code: code,
+                fait: visited ? "TRUE" : "FALSE"
+            })
+        });
+
+        console.log(`✓ Visite mise à jour pour ${code} → ${visited}`);
+    } catch (e) {
+        console.error("❌ Erreur mise à jour visite :", e);
+    }
+}
+
+
+// =========================
 // RENDER TABLE (route ORS)
 // =========================
 async function loadMagasins() {
@@ -130,7 +151,15 @@ async function loadMagasins() {
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${code}</td>
-            <td>${fait ? "✔️" : ""}</td>
+
+            <td>
+                <input 
+                    type="checkbox" 
+                    ${fait ? "checked" : ""} 
+                    onchange="toggleVisite('${code}', this.checked)"
+                >
+            </td>
+
             <td>${nomComplet}</td>
             <td>${type}</td>
             <td>${adresseComplete}</td>
