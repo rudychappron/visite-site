@@ -72,21 +72,32 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
 
 
 // =========================
-// NORMALISATION ADRESSE (OSM)
+// NORMALISATION ADRESSE (via Worker /geo)
 // =========================
 async function normalizeAddress(adresse, cp, ville) {
     const full = `${adresse}, ${cp} ${ville}`;
+
     try {
-        const res = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(full)}`,
-            { headers: { "User-Agent": "RudyApp/1.0" }}
-        );
-        const data = await res.json();
-        return (data && data.length > 0) ? data[0].display_name : full;
-    } catch {
+        const res = await fetch(`${API}/geo`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: full })
+        });
+
+        const json = await res.json();
+
+        if (json && json.length > 0) {
+            return json[0].display_name;
+        }
+
+        return full;
+
+    } catch (e) {
+        console.warn("⚠️ Normalisation échouée :", e);
         return full;
     }
 }
+
 
 
 // =========================
