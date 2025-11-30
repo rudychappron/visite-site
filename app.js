@@ -1,7 +1,6 @@
 // =========================
 // API Secure Worker
 // =========================
-
 const API = "https://winter-bar-234b.rudychappron.workers.dev";
 
 
@@ -38,12 +37,12 @@ function calculDistance(lat, lng) {
 
     const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    // ➜ d est en kilomètres → conversion m ou km
+    // ➜ d en kilomètres
     if (d < 1) {
-        return Math.round(d * 1000) + " m"; // ex : 0.34 km → 340 m
+        return Math.round(d * 1000) + " m"; // Ex : 340 m
     }
 
-    return Math.round(d) + " km"; // ex : 33.9 → 34 km
+    return Math.round(d) + " km"; // Ex : 34 km
 }
 
 
