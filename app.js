@@ -28,7 +28,7 @@ navigator.geolocation.getCurrentPosition(
 function calculDistance(lat, lng) {
     if (!lat || !lng || !window.userLat || !window.userLng) return "-";
 
-    const R = 6371; // rayon Terre
+    const R = 6371;
     const dLat = (lat - window.userLat) * Math.PI / 180;
     const dLng = (lng - window.userLng) * Math.PI / 180;
 
@@ -38,9 +38,7 @@ function calculDistance(lat, lng) {
         Math.cos(lat * Math.PI / 180) *
         Math.sin(dLng / 2) ** 2;
 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return Math.round(R * c);
+    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
 
@@ -53,8 +51,7 @@ async function getMagasins() {
     });
 
     const data = await res.json();
-    console.log("Magasins :", data);
-    return data.data; // IMPORTANT : la DATA est dans .data
+    return data.data; // IMPORTANT
 }
 
 
@@ -65,9 +62,7 @@ async function addMagasin(row) {
     await fetch(`${API}/add`, {
         method: "POST",
         body: JSON.stringify(row),
-        headers: {
-            "Content-Type": "application/json"
-        }
+        headers: { "Content-Type": "application/json" }
     });
 }
 
@@ -79,9 +74,7 @@ async function updateMagasin(row) {
     await fetch(`${API}/update`, {
         method: "POST",
         body: JSON.stringify(row),
-        headers: {
-            "Content-Type": "application/json"
-        }
+        headers: { "Content-Type": "application/json" }
     });
 }
 
@@ -93,9 +86,7 @@ async function deleteMagasin(code) {
     await fetch(`${API}/delete`, {
         method: "POST",
         body: JSON.stringify({ code }),
-        headers: {
-            "Content-Type": "application/json"
-        }
+        headers: { "Content-Type": "application/json" }
     });
 
     loadMagasins();
@@ -103,7 +94,7 @@ async function deleteMagasin(code) {
 
 
 // =========================
-// RENDRE LA TABLE
+// AFFICHAGE DU TABLEAU
 // =========================
 async function loadMagasins() {
     const magasins = await getMagasins();
@@ -113,19 +104,17 @@ async function loadMagasins() {
     tbody.innerHTML = "";
 
     magasins.slice(1).forEach(row => {
-        const [
-            code,          // 0
-            fait,          // 1
-            nomComplet,    // 2
-            type,          // 3
-            nomCourt,      // 4
-            adresse,       // 5
-            cp,            // 6
-            ville,         // 7
-            , , ,          // colonnes inutiles (8,9,10)
-            lat,           // 11
-            lng            // 12
-        ] = row;
+
+        // Correspondance EXACTE avec ton Google Sheet :
+        const code        = row[0];   // Col A
+        const fait        = row[1];   // Col B
+        const nomComplet  = row[2];   // Col C
+        const type        = row[3];   // Col D
+        const adresse     = row[5];   // Col F
+        const cp          = row[6];   // Col G
+        const ville       = row[7];   // Col H
+        const lat         = row[11];  // Col L
+        const lng         = row[12];  // Col M
 
         const adresseComplete = `${adresse}, ${cp} ${ville}`;
         const distance = calculDistance(lat, lng);
@@ -137,7 +126,6 @@ async function loadMagasins() {
             <td>${fait ? "✔️" : ""}</td>
             <td>${nomComplet}</td>
             <td>${type}</td>
-            <td>${nomCourt}</td>
             <td>${adresseComplete}</td>
             <td>${distance}</td>
             <td>
@@ -168,6 +156,6 @@ function goAdd() {
 
 
 // =========================
-// AUTO LOAD
+// CHARGEMENT AUTO
 // =========================
 loadMagasins();
