@@ -1,4 +1,4 @@
-console.log("📍 GEOCODE.JS CHARGÉ ✔");
+console.log("📍 GEOCODE LOADED ✔");
 
 const WORKER_GEO_URL = "https://winter-bar-234b.rudychappron.workers.dev/geo";
 
