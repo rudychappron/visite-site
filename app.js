@@ -1,7 +1,6 @@
 // =========================
 // API Secure Worker
 // =========================
-
 const API = "https://winter-bar-234b.rudychappron.workers.dev";
 
 
@@ -38,7 +37,9 @@ function calculDistance(lat, lng) {
         Math.cos(lat * Math.PI / 180) *
         Math.sin(dLng / 2) ** 2;
 
-    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return Math.round(R * c);
 }
 
 
@@ -47,11 +48,14 @@ function calculDistance(lat, lng) {
 // =========================
 async function getMagasins() {
     const res = await fetch(`${API}/get`, {
-        method: "GET",
+        method: "GET"
     });
 
     const data = await res.json();
-    return data.data; // IMPORTANT
+
+    console.log("Magasins reçus :", data);
+
+    return data; // Worker renvoie directement le tableau
 }
 
 
@@ -94,27 +98,34 @@ async function deleteMagasin(code) {
 
 
 // =========================
-// AFFICHAGE DU TABLEAU
+// AFFICHER LES MAGASINS
 // =========================
 async function loadMagasins() {
-    const magasins = await getMagasins();
-    if (!magasins) return;
+    const data = await getMagasins();
+
+    if (!data || !Array.isArray(data)) return;
+
+    const magasins = data.slice(1); // enlève l'en-tête
 
     const tbody = document.querySelector("tbody");
     tbody.innerHTML = "";
 
-    magasins.slice(1).forEach(row => {
-
-        // Correspondance EXACTE avec ton Google Sheet :
-        const code        = row[0];   // Col A
-        const fait        = row[1];   // Col B
-        const nomComplet  = row[2];   // Col C
-        const type        = row[3];   // Col D
-        const adresse     = row[5];   // Col F
-        const cp          = row[6];   // Col G
-        const ville       = row[7];   // Col H
-        const lat         = row[11];  // Col L
-        const lng         = row[12];  // Col M
+    magasins.forEach(row => {
+        const [
+            code,
+            fait,
+            nomComplet,
+            type,
+            nomCourt,
+            adresse,
+            cp,
+            ville,
+            ,
+            ,
+            ,
+            lat,
+            lng
+        ] = row;
 
         const adresseComplete = `${adresse}, ${cp} ${ville}`;
         const distance = calculDistance(lat, lng);
@@ -126,6 +137,7 @@ async function loadMagasins() {
             <td>${fait ? "✔️" : ""}</td>
             <td>${nomComplet}</td>
             <td>${type}</td>
+            <td>${nomCourt}</td>
             <td>${adresseComplete}</td>
             <td>${distance}</td>
             <td>
@@ -156,6 +168,6 @@ function goAdd() {
 
 
 // =========================
-// CHARGEMENT AUTO
+// AUTO LOAD
 // =========================
 loadMagasins();
