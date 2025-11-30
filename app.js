@@ -1,8 +1,8 @@
 // =========================
 // API Secure Worker
 // =========================
-const API = "https://winter-bar-234b.rudychappron.workers.dev";
 
+const API = "https://winter-bar-234b.rudychappron.workers.dev";
 
 // =========================
 // POSITION GPS UTILISATEUR
@@ -15,14 +15,11 @@ navigator.geolocation.getCurrentPosition(
         window.userLat = pos.coords.latitude;
         window.userLng = pos.coords.longitude;
     },
-    err => {
-        console.warn("GPS refusé → distance impossible");
-    }
+    () => console.warn("GPS refusé → distance impossible")
 );
 
-
 // =========================
-// CALCUL DE DISTANCE (km)
+// CALCUL DISTANCE
 // =========================
 function calculDistance(lat, lng) {
     if (!lat || !lng || !window.userLat || !window.userLng) return "-";
@@ -37,54 +34,23 @@ function calculDistance(lat, lng) {
         Math.cos(lat * Math.PI / 180) *
         Math.sin(dLng / 2) ** 2;
 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return Math.round(R * c);
+    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-
 // =========================
-// GET — Lire les magasins
+// GET — lire magasins
 // =========================
 async function getMagasins() {
-    const res = await fetch(`${API}/get`, {
-        method: "GET"
-    });
+    const res = await fetch(`${API}/get`, { method: "GET" });
+    const json = await res.json();
 
-    const data = await res.json();
+    console.log("Réponse API :", json);
 
-    console.log("Magasins reçus :", data);
-
-    return data; // Worker renvoie directement le tableau
+    return json.data; // IMPORTANT
 }
 
-
 // =========================
-// ADD — Ajouter un magasin
-// =========================
-async function addMagasin(row) {
-    await fetch(`${API}/add`, {
-        method: "POST",
-        body: JSON.stringify(row),
-        headers: { "Content-Type": "application/json" }
-    });
-}
-
-
-// =========================
-// UPDATE — Modifier un magasin
-// =========================
-async function updateMagasin(row) {
-    await fetch(`${API}/update`, {
-        method: "POST",
-        body: JSON.stringify(row),
-        headers: { "Content-Type": "application/json" }
-    });
-}
-
-
-// =========================
-// DELETE — Supprimer un magasin
+// DELETE
 // =========================
 async function deleteMagasin(code) {
     await fetch(`${API}/delete`, {
@@ -96,57 +62,43 @@ async function deleteMagasin(code) {
     loadMagasins();
 }
 
-
 // =========================
-// AFFICHER LES MAGASINS
+// RENDER TABLE
 // =========================
 async function loadMagasins() {
-    const data = await getMagasins();
-
-    if (!data || !Array.isArray(data)) return;
-
-    const magasins = data.slice(1); // enlève l'en-tête
+    const magasins = await getMagasins();
+    if (!magasins) return;
 
     const tbody = document.querySelector("tbody");
     tbody.innerHTML = "";
 
-    magasins.forEach(row => {
-        const [
-            code,
-            fait,
-            nomComplet,
-            type,
-            nomCourt,
-            adresse,
-            cp,
-            ville,
-            ,
-            ,
-            ,
-            lat,
-            lng
-        ] = row;
+    magasins.slice(1).forEach(row => {
+
+        const code = row[0];
+        const fait = row[1];
+        const nomComplet = row[2];
+        const type = row[3];
+        const nomCourt = row[4];
+        const adresse = row[5];
+        const cp = row[6];
+        const ville = row[7];
+        const lat = row[11];
+        const lng = row[12];
 
         const adresseComplete = `${adresse}, ${cp} ${ville}`;
         const distance = calculDistance(lat, lng);
 
         const tr = document.createElement("tr");
-
         tr.innerHTML = `
             <td>${code}</td>
             <td>${fait ? "✔️" : ""}</td>
             <td>${nomComplet}</td>
             <td>${type}</td>
-            <td>${nomCourt}</td>
             <td>${adresseComplete}</td>
             <td>${distance}</td>
             <td>
-                <button class="btn-edit" onclick="editMagasin('${code}')">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
-                <button class="btn-del" onclick="deleteMagasin('${code}')">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
+                <button onclick="editMagasin('${code}')">✏️</button>
+                <button onclick="deleteMagasin('${code}')">🗑</button>
             </td>
         `;
 
@@ -154,10 +106,6 @@ async function loadMagasins() {
     });
 }
 
-
-// =========================
-// NAVIGATION
-// =========================
 function editMagasin(code) {
     window.location.href = `edit-magasin.html?code=${code}`;
 }
@@ -166,8 +114,4 @@ function goAdd() {
     window.location.href = "add-magasin.html";
 }
 
-
-// =========================
-// AUTO LOAD
-// =========================
 loadMagasins();
