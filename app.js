@@ -14,6 +14,25 @@ let gpsUpdating = false;
 let modeProximite = true;
 
 
+// =======================================
+// 🔥 HAVERSINE – Distance "à vol d’oiseau"
+// =======================================
+function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371; 
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) *
+        Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+
 // ============================
 // ORS - Distance + Durée via Worker
 // ============================
@@ -30,6 +49,7 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
             })
         });
 
+        if (!res.ok) return null;
         const json = await res.json();
         if (!json.routes || !json.routes[0]) return null;
 
@@ -41,22 +61,23 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
         const min = Math.round(seconds / 60);
         const h = Math.floor(min / 60);
         const m = min % 60;
-        const duree = (h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m} min`);
+
+        const duree = h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m} min`;
 
         return { km, duree };
 
-    } catch (err) {
-        console.log("ORS ERROR:", err);
+    } catch {
         return null;
     }
 }
 
 
 // ============================
-// Nominatim normalisation
+// Normalisation adresse via /geo
 // ============================
 async function normalizeAddress(adresse, cp, ville) {
     const full = `${adresse}, ${cp} ${ville}`;
+
     try {
         const res = await fetch(`${API}/geo`, {
             method: "POST",
@@ -89,7 +110,7 @@ async function getMagasins() {
 
 
 // =========================
-// Delete magasin
+// DELETE magasin
 // =========================
 async function deleteMagasin(code) {
     await fetch(`${API}/delete`, {
@@ -102,12 +123,13 @@ async function deleteMagasin(code) {
 
 
 // =========================
-// Toggle visite
+// Toggle VISITE
 // =========================
 async function toggleVisite(code, checkboxElement) {
+
     const newState = checkboxElement.checked;
 
-    if (!confirm(newState ? "Marquer comme VISITÉ ?" : "Marquer comme NON VISITÉ ?")) {
+    if (!confirm(newState ? "Marquer VISITÉ ?" : "Marquer NON VISITÉ ?")) {
         checkboxElement.checked = !newState;
         return;
     }
@@ -121,14 +143,17 @@ async function toggleVisite(code, checkboxElement) {
 
 
 // =========================
-// Affichage tableau
+// AFFICHAGE TABLEAU
 // =========================
 async function loadMagasins() {
+
     const magasins = await getMagasins();
     const tbody = document.querySelector("tbody");
     tbody.innerHTML = "";
 
     let list = magasins.slice(1).map(row => {
+
+        // ⚠ lat = col 11, lng = col 12
         const lat = row[11];
         const lng = row[12];
 
@@ -140,8 +165,9 @@ async function loadMagasins() {
         };
     });
 
-    list.sort((a, b) => a.dist - b.dist);
-    const toDisplay = modeProximite ? list.slice(0, 5) : list;
+    list.sort((a,b) => a.dist - b.dist);
+
+    const toDisplay = modeProximite ? list.slice(0,5) : list;
 
     for (const item of toDisplay) {
 
@@ -151,17 +177,16 @@ async function loadMagasins() {
         const nomComplet = row[2];
         const type = row[3];
         const adresse = row[5];
-        const cp = String(row[6]).padStart(5, "0");
+        const cp = String(row[6]).padStart(5,"0");
         const ville = row[7];
 
         const lat = item.lat;
         const lng = item.lng;
 
-        // KM + TEMPS (PROPRE)
         let kmTxt = "-";
         let tempsTxt = "-";
 
-        if (lat && lng && window.userLat && window.userLng) {
+        if (gpsReady && lat && lng) {
             const info = await getRouteDistance(window.userLat, window.userLng, lat, lng);
             if (info) {
                 kmTxt = info.km;
@@ -170,9 +195,11 @@ async function loadMagasins() {
         }
 
         const adresseComplete = await normalizeAddress(adresse, cp, ville);
+
         const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 
         const tr = document.createElement("tr");
+
         tr.innerHTML = `
             <td>${code}</td>
             <td><input type="checkbox" ${fait ? "checked" : ""} onchange="toggleVisite('${code}', this)"></td>
@@ -182,18 +209,16 @@ async function loadMagasins() {
             <td><a href="${wazeUrl}" target="_blank"><img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg" style="width:30px;height:30px;"></a></td>
             <td>${kmTxt}</td>
             <td>${tempsTxt}</td>
-            <td>
-                <button onclick="editMagasin('${code}')">✏️</button>
-                <button onclick="deleteMagasin('${code}')">🗑</button>
-            </td>
+            <td><button onclick="editMagasin('${code}')">✏️</button><button onclick="deleteMagasin('${code}')">🗑</button></td>
         `;
+
         tbody.appendChild(tr);
     }
 }
 
 
 // =========================
-// GPS TEMPS RÉEL — WATCHPOSITION
+// GPS TEMPS RÉEL — watchPosition
 // =========================
 navigator.geolocation.watchPosition(
     pos => {
@@ -207,7 +232,7 @@ navigator.geolocation.watchPosition(
             loadMagasins().then(() => gpsUpdating = false);
         }
     },
-    err => console.warn("GPS refusé:", err),
+    err => console.warn("GPS refusé", err),
     { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
 );
 
@@ -217,11 +242,7 @@ navigator.geolocation.watchPosition(
 // =========================
 function editMagasin(code) { location.href = `edit-magasin.html?code=${code}`; }
 function goAdd() { location.href = "add-magasin.html"; }
-
-function toggleView() {
-    modeProximite = !modeProximite;
-    loadMagasins();
-}
+function toggleView() { modeProximite = !modeProximite; loadMagasins(); }
 
 
 // =========================
