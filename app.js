@@ -3,13 +3,11 @@
 // =========================
 const API = "https://winter-bar-234b.rudychappron.workers.dev";
 
-
 // =========================
 // POSITION GPS UTILISATEUR
 // =========================
 window.userLat = null;
 window.userLng = null;
-
 
 // =========================
 // NORMALISATION ADRESSE (OSM)
@@ -32,7 +30,6 @@ async function normalizeAddress(adresse, cp, ville) {
         return full;
     }
 }
-
 
 // ============================
 // ORS - Distance + Durée
@@ -60,32 +57,25 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
         const json = await res.json();
         if (!json.routes || !json.routes[0]) return null;
 
-        // Distance
         const meters = json.routes[0].summary.distance;
         const km = (meters / 1000).toFixed(1) + " km";
 
-        // Durée
         const seconds = json.routes[0].summary.duration;
-        const minutes = Math.round(seconds / 60);
+        const mins = Math.round(seconds / 60);
 
-        const h = Math.floor(minutes / 60);
-        const m = minutes % 60;
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
 
-        let dureeTxt = (h > 0)
-            ? `${h}h${String(m).padStart(2, "0")}`
-            : `${m} min`;
+        const duree =
+            h > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${m} min`;
 
-        return {
-            km: km,
-            duree: dureeTxt
-        };
+        return { km, duree };
 
     } catch (e) {
         console.error("❌ ORS erreur :", e);
         return null;
     }
 }
-
 
 // =========================
 // GET — lire magasins
@@ -101,7 +91,6 @@ async function getMagasins() {
     }
 }
 
-
 // =========================
 // DELETE magasin
 // =========================
@@ -114,9 +103,8 @@ async function deleteMagasin(code) {
     loadMagasins();
 }
 
-
 // =========================
-// UPDATE VISITE magasin
+// UPDATE VISITE magasin — FIX FINAL
 // =========================
 async function toggleVisite(code, visited) {
     try {
@@ -125,7 +113,7 @@ async function toggleVisite(code, visited) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 code: code,
-                fait: visited
+                fait: visited === true // 🟢 garantit un BOOLEAN
             })
         });
 
@@ -136,20 +124,22 @@ async function toggleVisite(code, visited) {
     }
 }
 
-
 // =========================
 // RENDER TABLE
 // =========================
 async function loadMagasins() {
     const magasins = await getMagasins();
     const tbody = document.querySelector("tbody");
-
     tbody.innerHTML = "";
 
     for (const row of magasins.slice(1)) {
 
         const code = row[0];
-        const fait = row[1] === true || row[1] === "TRUE";
+        const fait =
+            row[1] === true ||
+            row[1] === "TRUE" ||
+            row[1] === "true"; // 🟢 gère toutes les valeurs envoyées par Sheets
+
         const nomComplet = row[2];
         const type = row[3];
         const adresse = row[5];
@@ -158,10 +148,8 @@ async function loadMagasins() {
         const lat = row[11];
         const lng = row[12];
 
-        // Adresse normalisée
         const adresseComplete = await normalizeAddress(adresse, cp, ville);
 
-        // Distance + Temps ORS
         let kmTxt = "-";
         let tempsTxt = "-";
 
@@ -172,14 +160,12 @@ async function loadMagasins() {
                 lat,
                 lng
             );
-
             if (info) {
                 kmTxt = info.km;
                 tempsTxt = info.duree;
             }
         }
 
-        // URL Waze
         const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 
         const tr = document.createElement("tr");
@@ -218,7 +204,6 @@ async function loadMagasins() {
     }
 }
 
-
 // =========================
 // NAVIGATION
 // =========================
@@ -229,7 +214,6 @@ function editMagasin(code) {
 function goAdd() {
     window.location.href = "add-magasin.html";
 }
-
 
 // =========================
 // CHARGEMENT APRÈS GPS
