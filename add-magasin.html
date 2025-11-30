@@ -3,22 +3,55 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ajouter un magasin</title>
+<title>Ajouter un magasin — Outil Rudy</title>
+
 <link rel="stylesheet" href="styles.css">
+
+<!-- Icônes FontAwesome (pour style pro si tu ajoutes des icônes) -->
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
 <body>
 
-<h2>Ajouter un magasin</h2>
+<header class="header">
+    <h1>Ajouter un magasin</h1>
+    <button class="logout-btn" onclick="logout()">
+        <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+    </button>
+</header>
 
-<div class="form">
-    <input id="code" placeholder="Code magasin">
-    <input id="nom" placeholder="Nom">
-    <input id="type" placeholder="Type">
-    <input id="adresse" placeholder="Adresse">
-    <input id="cp" placeholder="Code postal">
-    <input id="ville" placeholder="Ville">
-    <button onclick="addMagasin()">✔ Enregistrer</button>
+<div class="form-container">
+    <div class="form">
+        <label>Code magasin</label>
+        <input id="code" placeholder="Ex : 12345">
+
+        <label>Nom du magasin</label>
+        <input id="nom" placeholder="Ex : BV Limonest">
+
+        <label>Type</label>
+        <input id="type" placeholder="Ex : BV / TOTAL / AUTRE">
+
+        <label>Adresse</label>
+        <input id="adresse" placeholder="Ex : 8 route du Lac">
+
+        <label>Code postal</label>
+        <input id="cp" placeholder="Ex : 69000">
+
+        <label>Ville</label>
+        <input id="ville" placeholder="Ex : Lyon">
+
+        <!-- FUTUR (optionnel) : coordonnées GPS
+        <label>Latitude</label>
+        <input id="lat">
+        <label>Longitude</label>
+        <input id="lon">
+        -->
+
+        <button class="btn-primary" onclick="addMagasin()">
+            <i class="fa-solid fa-check"></i> Enregistrer
+        </button>
+    </div>
 </div>
 
 <script src="auth.js"></script>
