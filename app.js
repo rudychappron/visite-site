@@ -15,12 +15,10 @@ window.userLng = null;
 async function normalizeAddress(adresse, cp, ville) {
     const full = `${adresse}, ${cp} ${ville}`;
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(full)}`;
-
     try {
         const res = await fetch(url, { headers: { "User-Agent": "RudyApp/1.0" }});
         const data = await res.json();
-        if (!data || data.length === 0) return full;
-        return data[0].display_name;
+        return (data && data.length > 0) ? data[0].display_name : full;
     } catch {
         return full;
     }
@@ -37,29 +35,22 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
                 "Authorization": ORS_API_KEY,
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                coordinates: [
-                    [lng1, lat1],
-                    [lng2, lat2]
-                ]
-            })
+            body: JSON.stringify({ coordinates: [[lng1, lat1], [lng2, lat2]] })
         });
 
         const json = await res.json();
         if (!json.routes || !json.routes[0]) return null;
 
-        // Distance
         const km = (json.routes[0].summary.distance / 1000).toFixed(1) + " km";
 
-        // Temps
-        const seconds = json.routes[0].summary.duration;
-        const minutes = Math.round(seconds / 60);
-        const h = Math.floor(minutes / 60);
-        const m = minutes % 60;
+        const sec = json.routes[0].summary.duration;
+        const min = Math.round(sec / 60);
+        const h = Math.floor(min / 60);
+        const m = min % 60;
+
         const duree = h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m} min`;
 
         return { km, duree };
-
     } catch {
         return null;
     }
@@ -98,16 +89,10 @@ async function toggleVisite(code, visited) {
         await fetch(`${API}/updateVisite`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                code: code,
-                fait: visited === true
-            })
+            body: JSON.stringify({ code, fait: visited === true })
         });
-
-        console.log("✓ Visite mise à jour :", code, visited);
-
     } catch (e) {
-        console.error("❌ Erreur updateVisite :", e);
+        console.error("Erreur updateVisite :", e);
     }
 }
 
@@ -120,14 +105,15 @@ async function loadMagasins() {
     tbody.innerHTML = "";
 
     for (const row of magasins.slice(1)) {
-
         const code = row[0];
         const fait = row[1] === true || row[1] === "TRUE";
+
         const nomComplet = row[2];
         const type = row[3];
         const adresse = row[5];
         const cp = String(row[6]).padStart(5, "0");
         const ville = row[7];
+
         const lat = row[11];
         const lng = row[12];
 
@@ -151,11 +137,8 @@ async function loadMagasins() {
             <td>${code}</td>
 
             <td>
-                <input 
-                    type="checkbox"
-                    ${fait ? "checked" : ""}
-                    onchange="toggleVisite('${code}', this.checked)"
-                >
+                <input type="checkbox" ${fait ? "checked" : ""} 
+                       onchange="toggleVisite('${code}', this.checked)">
             </td>
 
             <td>${nomComplet}</td>
@@ -183,13 +166,35 @@ async function loadMagasins() {
 }
 
 // =========================
+// RAFRAÎCHIR LA POSITION
+// =========================
+async function refreshPosition() {
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            window.userLat = pos.coords.latitude;
+            window.userLng = pos.coords.longitude;
+            loadMagasins();
+        },
+        () => console.warn("GPS refusé pour rafraîchir la position")
+    );
+}
+
+// =========================
+// AUTO-RAFRÂICHISSEMENT – 60 SECONDES
+// =========================
+setInterval(() => {
+    console.log("🔄 Auto-refresh position…");
+    refreshPosition();
+}, 60000);
+
+// =========================
 // NAVIGATION
 // =========================
 function editMagasin(code) { window.location.href = `edit-magasin.html?code=${code}`; }
 function goAdd() { window.location.href = "add-magasin.html"; }
 
 // =========================
-// GPS + chargement
+// GPS INITIAL
 // =========================
 navigator.geolocation.getCurrentPosition(
     pos => {
