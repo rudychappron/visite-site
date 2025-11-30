@@ -10,17 +10,9 @@ const API = "https://winter-bar-234b.rudychappron.workers.dev";
 window.userLat = null;
 window.userLng = null;
 
-navigator.geolocation.getCurrentPosition(
-    pos => {
-        window.userLat = pos.coords.latitude;
-        window.userLng = pos.coords.longitude;
-    },
-    () => console.warn("GPS refusé → distance impossible")
-);
-
 
 // =========================
-// CALCUL DISTANCE (avec km/m)
+// CALCUL DISTANCE (km / m)
 // =========================
 function calculDistance(lat, lng) {
     if (!lat || !lng || !window.userLat || !window.userLng) return "-";
@@ -37,12 +29,13 @@ function calculDistance(lat, lng) {
 
     const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    // ➜ d en kilomètres
+    // < 1 km → m
     if (d < 1) {
-        return Math.round(d * 1000) + " m"; // Ex : 340 m
+        return Math.round(d * 1000) + " m";
     }
 
-    return Math.round(d) + " km"; // Ex : 34 km
+    // ≥ 1 km
+    return Math.round(d) + " km";
 }
 
 
@@ -70,7 +63,7 @@ async function getMagasins() {
 
 
 // =========================
-// DELETE
+// DELETE magasin
 // =========================
 async function deleteMagasin(code) {
     await fetch(`${API}/delete`, {
@@ -111,6 +104,9 @@ async function loadMagasins() {
         const adresseComplete = `${adresse} ${cp} ${ville}`.trim();
         const distance = calculDistance(lat, lng);
 
+        // Lien Waze
+        const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${code}</td>
@@ -118,7 +114,15 @@ async function loadMagasins() {
             <td>${nomComplet}</td>
             <td>${type}</td>
             <td>${adresseComplete}</td>
+
+            <td>
+                <a class="waze-btn" href="${wazeUrl}" target="_blank">
+                    <i class="fa-brands fa-waze"></i>
+                </a>
+            </td>
+
             <td>${distance}</td>
+
             <td>
                 <button onclick="editMagasin('${code}')">✏️</button>
                 <button onclick="deleteMagasin('${code}')">🗑</button>
@@ -143,6 +147,16 @@ function goAdd() {
 
 
 // =========================
-// CHARGEMENT AUTO
+// CHARGEMENT AUTO APRÈS GPS
 // =========================
-loadMagasins();
+navigator.geolocation.getCurrentPosition(
+    pos => {
+        window.userLat = pos.coords.latitude;
+        window.userLng = pos.coords.longitude;
+        loadMagasins(); // 🔥 charger après GPS
+    },
+    () => {
+        console.warn("GPS refusé → distances impossibles");
+        loadMagasins(); // charge quand même
+    }
+);
