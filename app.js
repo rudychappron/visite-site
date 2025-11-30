@@ -6,8 +6,8 @@ const API = "https://winter-bar-234b.rudychappron.workers.dev";
 // =========================
 // POSITION GPS UTILISATEUR
 // =========================
-window.userLat = null;
-window.userLng = null;
+window.userLat = null;  // latitude
+window.userLng = null;  // longitude
 
 // MODE AFFICHAGE : 5 proches ou tout
 let modeProximite = true;
@@ -17,7 +17,7 @@ let modeProximite = true;
 // 🔥 HAVERSINE – Distance "à vol d’oiseau"
 // =======================================
 function haversine(lat1, lon1, lat2, lon2) {
-    const R = 6371; // rayon Terre
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
 
@@ -28,7 +28,7 @@ function haversine(lat1, lon1, lat2, lon2) {
         Math.sin(dLon / 2) ** 2;
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // km
+    return R * c;
 }
 
 
@@ -42,8 +42,8 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 coordinates: [
-                    [lng1, lat1],  // départ
-                    [lng2, lat2]   // arrivée
+                    [lng1, lat1],  // départ : lon, lat
+                    [lng2, lat2]   // arrivée : lon, lat
                 ]
             })
         });
@@ -54,7 +54,6 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
         }
 
         const json = await res.json();
-
         if (!json.routes || !json.routes[0]) return null;
 
         const meters = json.routes[0].summary.distance;
@@ -77,7 +76,6 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
 }
 
 
-
 // =========================
 // NORMALISATION ADRESSE (via Worker /geo)
 // =========================
@@ -96,7 +94,6 @@ async function normalizeAddress(adresse, cp, ville) {
         if (json && json.length > 0) {
             return json[0].display_name;
         }
-
         return full;
 
     } catch (e) {
@@ -104,7 +101,6 @@ async function normalizeAddress(adresse, cp, ville) {
         return full;
     }
 }
-
 
 
 // =========================
@@ -162,7 +158,6 @@ async function toggleVisite(code, checkboxElement) {
 }
 
 
-
 // =========================
 // RENDER TABLE — VERSION PRO
 // =========================
@@ -176,27 +171,29 @@ async function loadMagasins() {
         return;
     }
 
-    // 1️⃣ Ajouter distance Haversine à chaque ligne
+    // 1️⃣ Ajouter distance Haversine (vol d’oiseau)
     let list = magasins.slice(1).map(row => {
-        const lat = row[11];
-        const lng = row[12];
-        let d = 9999;
-        if (lat && lng) d = haversine(window.userLat, window.userLng, lat, lng);
 
-        return {
-            row,
-            dist: d
-        };
+        // ⚠️ CORRECTION CRITIQUE : latitude = row[12], longitude = row[11]
+        const lng = row[11];
+        const lat = row[12];
+
+        let d = 9999;
+        if (lat && lng) {
+            d = haversine(window.userLat, window.userLng, lat, lng);
+        }
+
+        return { row, dist: d };
     });
 
-    // 2️⃣ Trier du plus proche au plus loin
+    // 2️⃣ Tri par proximité
     list.sort((a, b) => a.dist - b.dist);
 
-    // 3️⃣ Si mode "5 proches", on réduit
+    // 3️⃣ Mode 5 proches
     let toDisplay = modeProximite ? list.slice(0, 5) : list;
 
 
-    // 4️⃣ Générer l'affichage
+    // 4️⃣ Render HTML
     for (const item of toDisplay) {
 
         const row = item.row;
@@ -209,12 +206,13 @@ async function loadMagasins() {
         const adresse = row[5];
         const cp = String(row[6]).padStart(5, "0");
         const ville = row[7];
-        const lat = row[11];
-        const lng = row[12];
+
+        // ⚠️ Maintenir correction ici aussi
+        const lng = row[11];
+        const lat = row[12];
 
         const adresseComplete = await normalizeAddress(adresse, cp, ville);
 
-        // ORS uniquement sur les 5 affichés → RAPIDE ⚡
         let kmTxt = "-";
         let tempsTxt = "-";
 
@@ -247,7 +245,7 @@ async function loadMagasins() {
             <td>
                 <a href="${wazeUrl}" target="_blank">
                     <img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg"
-                         style="width:30px;height:30px;">
+                        style="width:30px;height:30px;">
                 </a>
             </td>
 
@@ -265,7 +263,6 @@ async function loadMagasins() {
 }
 
 
-
 // =========================
 // RAFRAÎCHIR POSITION
 // =========================
@@ -279,7 +276,6 @@ async function refreshPosition() {
         () => console.warn("GPS refusé")
     );
 }
-
 
 
 // =========================
@@ -296,7 +292,6 @@ function toggleView() {
     modeProximite = !modeProximite;
     loadMagasins();
 }
-
 
 
 // =========================
