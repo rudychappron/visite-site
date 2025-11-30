@@ -40,6 +40,16 @@
         <i class="fa-solid fa-location-dot"></i> Proximité / Tout
     </button>
 
+    <!-- 🔽 LISTE DÉROULANTE TRI -->
+    <select id="sortSelect" onchange="applySort()" class="btn-primary" style="padding:10px;">
+        <option value="none">🔽 Trier par…</option>
+        <option value="nom">Nom</option>
+        <option value="type">Type</option>
+        <option value="visite">Visités</option>
+        <option value="nonvisite">Non visités</option>
+        <option value="km">Distance</option>
+    </select>
+
 </div>
 
 <table class="magasins-table">
