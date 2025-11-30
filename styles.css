@@ -1,54 +1,221 @@
-body { 
-    font-family: Arial; 
-    margin:0; 
-    background:#f4f4f4;
+/* ----------------------------- */
+/*   GLOBAL / BODY               */
+/* ----------------------------- */
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background: #f4f4f4;
 }
 
-header {
-    display:flex;
-    justify-content:space-between;
-    padding:15px;
-    background:#222;
-    color:#fff;
+
+/* ----------------------------- */
+/*   HEADER                      */
+/* ----------------------------- */
+
+header, .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #202020;
+    color: #fff;
 }
+
+.header h1 {
+    margin: 0;
+}
+
+.logout-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.logout-btn:hover {
+    background: #0069d9;
+}
+
+
+/* ----------------------------- */
+/*   LOGIN PAGE                  */
+/* ----------------------------- */
 
 .login-body {
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
-    background:#ececec;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #ececec;
 }
 
 .login-card {
-    background:#fff;
-    padding:30px;
-    width:300px;
-    border-radius:10px;
-    box-shadow:0 4px 20px rgba(0,0,0,.15);
-    text-align:center;
+    background: #fff;
+    padding: 30px;
+    width: 320px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.15);
+    text-align: center;
 }
 
 .login-card input {
-    width:100%;
-    margin:10px 0;
-    padding:10px;
+    width: 100%;
+    margin: 10px 0;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
 }
 
-button {
-    padding:10px 15px;
-    background:#007bff;
-    color:#fff;
-    border:none;
-    border-radius:5px;
-    cursor:pointer;
+.login-card button {
+    width: 100%;
+    padding: 12px;
 }
 
-table { width:100%; border-collapse:collapse; margin-top:20px; }
-td, th { padding:10px; border-bottom:1px solid #ccc; }
-tr:nth-child(even) { background:#fafafa; }
 
-.form { max-width:400px; margin:auto; }
-.form input { width:100%; margin:10px 0; padding:10px; }
+/* ----------------------------- */
+/*   BUTTONS                     */
+/* ----------------------------- */
 
-.toolbar { display:flex; gap:10px; padding:10px; }
+button, .btn-primary {
+    padding: 10px 15px;
+    background: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover, .btn-primary:hover {
+    background: #0069d9;
+}
+
+.action-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin: 2px;
+    font-size: 15px;
+}
+
+.action-btn i {
+    pointer-events: none;
+}
+
+
+/* ----------------------------- */
+/*   TABLEAU PRO                 */
+/* ----------------------------- */
+
+.magasins-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: white;
+}
+
+.magasins-table th {
+    background: #202020;
+    color: white;
+    padding: 12px;
+    text-align: left;
+    font-weight: bold;
+}
+
+.magasins-table td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.magasins-table tr:nth-child(even) {
+    background: #f7f7f7;
+}
+
+/* Visité ou non */
+.visited {
+    color: #2ecc71;
+    font-weight: bold;
+}
+
+.not-visited {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+
+/* ----------------------------- */
+/*   FORM / AJOUT MAGASIN        */
+/* ----------------------------- */
+
+.form-container {
+    max-width: 500px;
+    margin: 30px auto;
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+}
+
+.form label {
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+.form input {
+    width: 100%;
+    margin: 8px 0;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+
+/* ----------------------------- */
+/*   TOP TOOLBAR                 */
+/* ----------------------------- */
+
+.toolbar {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+}
+
+.toolbar input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+
+/* ----------------------------- */
+/*   RESPONSIVE                  */
+/* ----------------------------- */
+
+@media (max-width: 600px) {
+    .magasins-table td,
+    .magasins-table th {
+        padding: 6px;
+        font-size: 12px;
+    }
+
+    .action-btn {
+        padding: 6px;
+    }
+
+    .login-card {
+        width: 90%;
+    }
+}
