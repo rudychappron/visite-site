@@ -12,27 +12,21 @@ window.userLng = null;
 
 
 // =========================
-// NORMALISATION D’ADRESSE (OSM)
+// NORMALISATION ADRESSE (OSM)
 // =========================
 async function normalizeAddress(adresse, cp, ville) {
     const full = `${adresse}, ${cp} ${ville}`;
-
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(full)}`;
 
     try {
         const res = await fetch(url, {
-            headers: {
-                "User-Agent": "RudyApp/1.0"
-            }
+            headers: { "User-Agent": "RudyApp/1.0" }
         });
 
         const data = await res.json();
-
         if (!data || data.length === 0) return full;
 
-        const item = data[0];
-
-        return item.display_name; // adresse officielle
+        return data[0].display_name;
     } catch (e) {
         console.warn("Adresse non normalisée :", e);
         return full;
@@ -44,22 +38,14 @@ async function normalizeAddress(adresse, cp, ville) {
 // GET — lire magasins
 // =========================
 async function getMagasins() {
-    const res = await fetch(`${API}/get`, { method: "GET" });
-
-    let json;
+    const res = await fetch(`${API}/get`);
     try {
-        json = await res.json();
+        const json = await res.json();
+        return json.data || json;
     } catch (e) {
-        console.error("❌ Impossible de lire la réponse Worker :", e);
+        console.error("Erreur JSON :", e);
         return [];
     }
-
-    console.log("Réponse API brute :", json);
-
-    if (Array.isArray(json)) return json;
-    if (json.data) return json.data;
-
-    return [];
 }
 
 
@@ -69,29 +55,29 @@ async function getMagasins() {
 async function deleteMagasin(code) {
     await fetch(`${API}/delete`, {
         method: "POST",
-        body: JSON.stringify({ code }),
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code })
     });
-
     loadMagasins();
 }
 
 
 // =========================
-// UPDATE VISITE magasin
+// UPDATE VISITE magasin — CORRIGÉ
 // =========================
 async function toggleVisite(code, visited) {
     try {
-        await fetch(`${API}/update`, {
+        await fetch(`${API}/updateVisite`, {   // ← ICI ✔
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 code: code,
-                fait: visited ? "TRUE" : "FALSE"
+                fait: visited                // ← Apps Script veut TRUE/FALSE natif
             })
         });
 
-        console.log(`✓ Visite mise à jour pour ${code} → ${visited}`);
+        console.log(`✓ Visite mise à jour pour ${code}`);
+
     } catch (e) {
         console.error("❌ Erreur mise à jour visite :", e);
     }
@@ -99,41 +85,31 @@ async function toggleVisite(code, visited) {
 
 
 // =========================
-// RENDER TABLE (route ORS)
+// RENDER TABLE
 // =========================
 async function loadMagasins() {
     const magasins = await getMagasins();
-    if (!magasins || magasins.length === 0) {
-        console.warn("⚠ Aucun magasin reçu !");
-        return;
-    }
-
     const tbody = document.querySelector("tbody");
+
     tbody.innerHTML = "";
 
     for (const row of magasins.slice(1)) {
 
-        const code = row[0] ?? "";
-        const fait = row[1] ?? false;
-        const nomComplet = row[2] ?? "";
-        const type = row[3] ?? "";
-        const adresse = row[5] ?? "";
-        const cp = String(row[6] ?? "").padStart(5, "0");
-        const ville = row[7] ?? "";
-        const lat = row[11] ?? null;
-        const lng = row[12] ?? null;
+        const code = row[0];
+        const fait = row[1] === true || row[1] === "TRUE";
+        const nomComplet = row[2];
+        const type = row[3];
+        const adresse = row[5];
+        const cp = String(row[6]).padStart(5, "0");
+        const ville = row[7];
+        const lat = row[11];
+        const lng = row[12];
 
-        // Adresse brute
-        const adresseBrute = `${adresse} ${cp} ${ville}`.trim();
+        // Adresse normalisée
+        const adresseComplete = await normalizeAddress(adresse, cp, ville);
 
-        // Adresse normalisée OSM
-        let adresseComplete = await normalizeAddress(adresse, cp, ville);
-
-        // =============================
-        // DISTANCE ROUTIÈRE ORS
-        // =============================
+        // Distance ORS
         let distance = "-";
-
         if (lat && lng && window.userLat && window.userLng) {
             distance = await getRouteDistance(
                 window.userLat,
@@ -143,9 +119,7 @@ async function loadMagasins() {
             );
         }
 
-        // =============================
-        // WAZE — VRAI LOGO OFFICIEL
-        // =============================
+        // URL Waze
         const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 
         const tr = document.createElement("tr");
@@ -154,8 +128,8 @@ async function loadMagasins() {
 
             <td>
                 <input 
-                    type="checkbox" 
-                    ${fait ? "checked" : ""} 
+                    type="checkbox"
+                    ${fait ? "checked" : ""}
                     onchange="toggleVisite('${code}', this.checked)"
                 >
             </td>
@@ -167,8 +141,7 @@ async function loadMagasins() {
             <td>
                 <a class="waze-btn" href="${wazeUrl}" target="_blank">
                     <img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg"
-                         alt="Waze"
-                         style="width:30px; height:30px;">
+                         style="width:30px;height:30px;">
                 </a>
             </td>
 
@@ -198,7 +171,7 @@ function goAdd() {
 
 
 // =========================
-// CHARGEMENT AUTO APRÈS GPS
+// CHARGEMENT APRÈS GPS
 // =========================
 navigator.geolocation.getCurrentPosition(
     pos => {
@@ -207,7 +180,7 @@ navigator.geolocation.getCurrentPosition(
         loadMagasins();
     },
     () => {
-        console.warn("GPS refusé → chargement sans distance");
+        console.warn("GPS refusé");
         loadMagasins();
     }
 );
