@@ -38,8 +38,13 @@ function distanceKM(lat1, lon1, lat2, lon2) {
  * RÉCUPÉRER & AFFICHER LA LISTE
  ****************************************************/
 async function loadMagasins() {
-  magasins = await getMagasins(); // vient de app-secure.js
-  renderTable(magasins);
+  try {
+    magasins = await getMagasins(); // vient de app-secure.js
+    renderTable(magasins);
+  } catch (e) {
+    console.error("Erreur GET :", e);
+    alert("Erreur de connexion au serveur sécurisé.");
+  }
 }
 
 function renderTable(list) {
@@ -99,17 +104,22 @@ function goAdd() {
  * AJOUT MAGASIN
  ****************************************************/
 async function addMagasin() {
-  await addMagasinSecure(
-    code.value,
-    nom.value,
-    type.value,
-    adresse.value,
-    cp.value,
-    ville.value
-  );
+  try {
+    await addMagasinSecure(
+      code.value,
+      nom.value,
+      type.value,
+      adresse.value,
+      cp.value,
+      ville.value
+    );
 
-  alert("Magasin ajouté !");
-  location.href = "dashboard.html";
+    alert("Magasin ajouté !");
+    location.href = "dashboard.html";
+  } catch (e) {
+    console.error("Erreur ADD :", e);
+    alert("Erreur lors de l'ajout (token ou signature incorrects).");
+  }
 }
 
 
@@ -143,17 +153,22 @@ async function fillEdit() {
 }
 
 async function saveEdit() {
-  await editMagasinSecure(
-    code.value,
-    nom.value,
-    type.value,
-    adresse.value,
-    cp.value,
-    ville.value
-  );
+  try {
+    await editMagasinSecure(
+      code.value,
+      nom.value,
+      type.value,
+      adresse.value,
+      cp.value,
+      ville.value
+    );
 
-  alert("Modifications enregistrées !");
-  location.href = "dashboard.html";
+    alert("Modifications enregistrées !");
+    location.href = "dashboard.html";
+  } catch (e) {
+    console.error("Erreur EDIT :", e);
+    alert("Erreur lors de la modification.");
+  }
 }
 
 
@@ -163,10 +178,14 @@ async function saveEdit() {
 async function delMagasin(codeMag) {
   if (!confirm("Supprimer ce magasin ?")) return;
 
-  await deleteMagasinSecure(codeMag);
-
-  alert("Supprimé !");
-  loadMagasins();
+  try {
+    await deleteMagasinSecure(codeMag);
+    alert("Supprimé !");
+    loadMagasins();
+  } catch (e) {
+    console.error("Erreur DELETE :", e);
+    alert("Erreur lors de la suppression.");
+  }
 }
 
 
