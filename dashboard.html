@@ -3,32 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Magasins</title>
+<title>Dashboard Magasins — Outil Rudy</title>
+
 <link rel="stylesheet" href="styles.css">
+
+<!-- Icônes PRO -->
+<link rel="stylesheet" 
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 </head>
 
 <body>
 
-<header>
-  <h1>Magasins</h1>
-  <button onclick="logout()">Déconnexion</button>
+<header class="header">
+  <h1>Liste des magasins</h1>
+  <button class="logout-btn" onclick="logout()">
+    <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+  </button>
 </header>
 
+<!-- BARRE D’OUTILS -->
 <div class="toolbar">
     <input id="search" type="text" placeholder="Rechercher…" onkeyup="searchMagasins()">
-    <button onclick="goAdd()">+ Ajouter</button>
-    <button onclick="clearCache()">Vider cache</button>
+
+    <button class="btn-primary" onclick="goAdd()">
+        <i class="fa-solid fa-plus"></i> Ajouter
+    </button>
+
+    <button class="btn-primary" onclick="clearCache()">
+        <i class="fa-solid fa-broom"></i> Vider cache
+    </button>
 </div>
 
-<table id="table-magasins">
+<!-- TABLEAU PRO -->
+<table class="magasins-table">
     <thead>
       <tr>
         <th>Code</th>
+        <th>Visité</th>
         <th>Nom</th>
         <th>Type</th>
         <th>Adresse</th>
         <th>Ville</th>
-        <th>CP</th>
+        <th>KM</th>
         <th>Actions</th>
       </tr>
     </thead>
