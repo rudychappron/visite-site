@@ -1,4 +1,4 @@
-// HASH SHA-256 du mot de passe Chappron1992
+// HASH SHA-256 
 const HASH = "6a93bf749c53a7c596f0cadb450e2ba4c92fbdc4ba3691e31839db9485cdb481";
 
 // Fonction hash
