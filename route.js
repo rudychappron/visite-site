@@ -1,46 +1,49 @@
 /* ============================
-   OPENROUTESERVICE — Distance Routière
+   ORS via ton Worker sécurisé
    ============================ */
 
-// 👉 Mets ta clé ici :
-const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImYzMzE4ODljM2Q2YTQzNjlhMzAwZDIxODRhOGNjZGMzIiwiaCI6Im11cm11cjY0In0=";  
-
+const WORKER_URL = "https://winter-bar-234b.rudychappron.workers.dev/ors";
 
 /**
  * getRouteDistance(lat1, lng1, lat2, lng2)
- * Retourne la VRAIE distance routière en KM (arrondie)
+ * → Retourne la distance routière en km via ton Worker
  */
 async function getRouteDistance(lat1, lng1, lat2, lng2) {
     try {
-        const url = "https://api.openrouteservice.org/v2/directions/driving-car";
-
-        const body = {
+        const payload = {
             coordinates: [
-                [lng1, lat1],  // départ
-                [lng2, lat2]   // arrivée
+                [lng1, lat1],   // départ
+                [lng2, lat2]    // arrivée
             ]
         };
 
-        const res = await fetch(url, {
+        const res = await fetch(WORKER_URL, {
             method: "POST",
             headers: {
-                "Authorization": ORS_API_KEY,
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify(payload)
         });
+
+        if (!res.ok) {
+            console.error("❌ Erreur Worker ORS:", res.status);
+            return null;
+        }
 
         const json = await res.json();
 
-        if (!json.routes || !json.routes[0]) return null;
+        if (!json.routes || !json.routes[0]) {
+            console.error("⚠️ Réponse ORS invalide via Worker", json);
+            return null;
+        }
 
         const meters = json.routes[0].summary.distance;
         const km = meters / 1000;
 
-        return km.toFixed(1) + " km";  
+        return km.toFixed(1) + " km";
 
-    } catch (e) {
-        console.error("❌ ORS erreur :", e);
+    } catch (err) {
+        console.error("❌ getRouteDistance() erreur :", err);
         return null;
     }
 }
