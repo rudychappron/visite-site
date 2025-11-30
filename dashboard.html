@@ -36,44 +36,27 @@
         🔄 Rafraîchir position
     </button>
 
-    <button class="btn-primary" onclick="toggleView()">
-        <i class="fa-solid fa-location-dot"></i> Proximité / Tout
-    </button>
-
-    <!-- 🔽 LISTE DÉROULANTE TRI -->
-    <select id="sortSelect" onchange="applySort()" class="btn-primary" style="padding:10px;">
-        <option value="none">🔽 Trier par…</option>
-        <option value="nom">Nom</option>
-        <option value="type">Type</option>
-        <option value="visite">Visités</option>
-        <option value="nonvisite">Non visités</option>
-        <option value="km">Distance</option>
-    </select>
-
 </div>
 
 <table class="magasins-table">
     <thead>
         <tr>
-            <th>Code</th>
-            <th>Visité</th>
-            <th>Nom complet</th>
-            <th>Type</th>
+            <th onclick="sortBy('code')">Code</th>
+            <th onclick="sortBy('visite')">Visité</th>
+            <th onclick="sortBy('nom')">Nom complet</th>
+            <th onclick="sortBy('type')">Type</th>
             <th>Adresse complète</th>
             <th>Waze</th>
-            <th>KM</th>
-            <th>Temps</th>
+            <th onclick="sortBy('km')">KM</th>
+            <th onclick="sortBy('temps')">Temps</th>
             <th>Actions</th>
         </tr>
     </thead>
     <tbody></tbody>
 </table>
 
-<!-- 🔐 Auth -->
 <script src="auth.js?v=1"></script>
-
-<!-- 🧠 Application (tout est ici) -->
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 
 </body>
 </html>
