@@ -16,11 +16,16 @@ let modeProximite = true;
 // 🔥 HAVERSINE – Distance "à vol d’oiseau"
 // =======================================
 function haversine(lat1, lon1, lat2, lon2) {
-    if (!lat1 || !lon1 || !lat2 || !lng2) return 99999;
+    lat1 = Number(lat1);
+    lon1 = Number(lon1);
+    lat2 = Number(lat2);
+    lon2 = Number(lon2);
+
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 99999;
 
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lng2 - lon1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
 
     const a =
         Math.sin(dLat / 2) ** 2 +
@@ -154,7 +159,9 @@ async function loadMagasins() {
         row,
         lat: Number(row[11]),
         lng: Number(row[12]),
-        dist: (window.userLat ? haversine(window.userLat, window.userLng, row[11], row[12]) : 99999)
+        dist: (window.userLat ?
+            haversine(Number(window.userLat), Number(window.userLng), Number(row[11]), Number(row[12]))
+            : 99999)
     }));
 
     list.sort((a, b) => a.dist - b.dist);
