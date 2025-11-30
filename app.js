@@ -17,16 +17,11 @@ async function normalizeAddress(adresse, cp, ville) {
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(full)}`;
 
     try {
-        const res = await fetch(url, {
-            headers: { "User-Agent": "RudyApp/1.0" }
-        });
-
+        const res = await fetch(url, { headers: { "User-Agent": "RudyApp/1.0" }});
         const data = await res.json();
         if (!data || data.length === 0) return full;
-
         return data[0].display_name;
-    } catch (e) {
-        console.warn("Adresse non normalisée :", e);
+    } catch {
         return full;
     }
 }
@@ -36,43 +31,36 @@ async function normalizeAddress(adresse, cp, ville) {
 // ============================
 async function getRouteDistance(lat1, lng1, lat2, lng2) {
     try {
-        const url = "https://api.openrouteservice.org/v2/directions/driving-car";
-
-        const body = {
-            coordinates: [
-                [lng1, lat1],
-                [lng2, lat2]
-            ]
-        };
-
-        const res = await fetch(url, {
+        const res = await fetch("https://api.openrouteservice.org/v2/directions/driving-car", {
             method: "POST",
             headers: {
                 "Authorization": ORS_API_KEY,
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify({
+                coordinates: [
+                    [lng1, lat1],
+                    [lng2, lat2]
+                ]
+            })
         });
 
         const json = await res.json();
         if (!json.routes || !json.routes[0]) return null;
 
-        const meters = json.routes[0].summary.distance;
-        const km = (meters / 1000).toFixed(1) + " km";
+        // Distance
+        const km = (json.routes[0].summary.distance / 1000).toFixed(1) + " km";
 
+        // Temps
         const seconds = json.routes[0].summary.duration;
-        const mins = Math.round(seconds / 60);
-
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
-
-        const duree =
-            h > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${m} min`;
+        const minutes = Math.round(seconds / 60);
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        const duree = h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m} min`;
 
         return { km, duree };
 
-    } catch (e) {
-        console.error("❌ ORS erreur :", e);
+    } catch {
         return null;
     }
 }
@@ -81,12 +69,11 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
 // GET — lire magasins
 // =========================
 async function getMagasins() {
-    const res = await fetch(`${API}/get`);
     try {
+        const res = await fetch(`${API}/get`);
         const json = await res.json();
         return json.data || json;
-    } catch (e) {
-        console.error("Erreur JSON :", e);
+    } catch {
         return [];
     }
 }
@@ -104,7 +91,7 @@ async function deleteMagasin(code) {
 }
 
 // =========================
-// UPDATE VISITE magasin — FIX FINAL
+// UPDATE VISITE magasin
 // =========================
 async function toggleVisite(code, visited) {
     try {
@@ -113,14 +100,14 @@ async function toggleVisite(code, visited) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 code: code,
-                fait: visited === true // 🟢 garantit un BOOLEAN
+                fait: visited === true
             })
         });
 
-        console.log(`✓ Visite mise à jour pour ${code}`);
+        console.log("✓ Visite mise à jour :", code, visited);
 
     } catch (e) {
-        console.error("❌ Erreur mise à jour visite :", e);
+        console.error("❌ Erreur updateVisite :", e);
     }
 }
 
@@ -135,11 +122,7 @@ async function loadMagasins() {
     for (const row of magasins.slice(1)) {
 
         const code = row[0];
-        const fait =
-            row[1] === true ||
-            row[1] === "TRUE" ||
-            row[1] === "true"; // 🟢 gère toutes les valeurs envoyées par Sheets
-
+        const fait = row[1] === true || row[1] === "TRUE";
         const nomComplet = row[2];
         const type = row[3];
         const adresse = row[5];
@@ -154,12 +137,7 @@ async function loadMagasins() {
         let tempsTxt = "-";
 
         if (lat && lng && window.userLat && window.userLng) {
-            const info = await getRouteDistance(
-                window.userLat,
-                window.userLng,
-                lat,
-                lng
-            );
+            const info = await getRouteDistance(window.userLat, window.userLng, lat, lng);
             if (info) {
                 kmTxt = info.km;
                 tempsTxt = info.duree;
@@ -207,16 +185,11 @@ async function loadMagasins() {
 // =========================
 // NAVIGATION
 // =========================
-function editMagasin(code) {
-    window.location.href = `edit-magasin.html?code=${code}`;
-}
-
-function goAdd() {
-    window.location.href = "add-magasin.html";
-}
+function editMagasin(code) { window.location.href = `edit-magasin.html?code=${code}`; }
+function goAdd() { window.location.href = "add-magasin.html"; }
 
 // =========================
-// CHARGEMENT APRÈS GPS
+// GPS + chargement
 // =========================
 navigator.geolocation.getCurrentPosition(
     pos => {
@@ -224,8 +197,5 @@ navigator.geolocation.getCurrentPosition(
         window.userLng = pos.coords.longitude;
         loadMagasins();
     },
-    () => {
-        console.warn("GPS refusé");
-        loadMagasins();
-    }
+    () => loadMagasins()
 );
