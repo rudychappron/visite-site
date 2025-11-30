@@ -47,7 +47,6 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
         const min = Math.round(sec / 60);
         const h = Math.floor(min / 60);
         const m = min % 60;
-
         const duree = h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m} min`;
 
         return { km, duree };
@@ -82,17 +81,40 @@ async function deleteMagasin(code) {
 }
 
 // =========================
-// UPDATE VISITE magasin
+// UPDATE VISITE (AVEC POPUP)
 // =========================
-async function toggleVisite(code, visited) {
+async function toggleVisite(code, checkboxElement) {
+
+    const newState = checkboxElement.checked;
+
+    // Popup confirmation
+    const confirmMsg = newState
+        ? "Confirmer : marquer ce magasin comme VISITÉ ?"
+        : "Confirmer : marquer ce magasin comme NON VISITÉ ?";
+
+    const ok = confirm(confirmMsg);
+
+    if (!ok) {
+        checkboxElement.checked = !newState; // on remet comme avant
+        return;
+    }
+
+    // Mise à jour backend
     try {
         await fetch(`${API}/updateVisite`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code, fait: visited === true })
+            body: JSON.stringify({
+                code,
+                fait: newState === true
+            })
         });
+
+        console.log("✓ Visite mise à jour :", code, newState);
+
     } catch (e) {
-        console.error("Erreur updateVisite :", e);
+        alert("❌ Erreur ! La mise à jour n’a pas été faite.");
+        checkboxElement.checked = !newState;
     }
 }
 
@@ -105,6 +127,7 @@ async function loadMagasins() {
     tbody.innerHTML = "";
 
     for (const row of magasins.slice(1)) {
+
         const code = row[0];
         const fait = row[1] === true || row[1] === "TRUE";
 
@@ -137,8 +160,11 @@ async function loadMagasins() {
             <td>${code}</td>
 
             <td>
-                <input type="checkbox" ${fait ? "checked" : ""} 
-                       onchange="toggleVisite('${code}', this.checked)">
+                <input 
+                    type="checkbox" 
+                    ${fait ? "checked" : ""}
+                    onchange="toggleVisite('${code}', this)"
+                >
             </td>
 
             <td>${nomComplet}</td>
@@ -180,7 +206,7 @@ async function refreshPosition() {
 }
 
 // =========================
-// AUTO-RAFRÂICHISSEMENT – 60 SECONDES
+// AUTO-REFRESH – 60s
 // =========================
 setInterval(() => {
     console.log("🔄 Auto-refresh position…");
