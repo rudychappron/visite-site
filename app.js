@@ -12,34 +12,6 @@ window.userLng = null;
 
 
 // =========================
-// CALCUL DISTANCE (km / m)
-// =========================
-function calculDistance(lat, lng) {
-    if (!lat || !lng || !window.userLat || !window.userLng) return "-";
-
-    const R = 6371;
-    const dLat = (lat - window.userLat) * Math.PI / 180;
-    const dLng = (lng - window.userLng) * Math.PI / 180;
-
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(window.userLat * Math.PI / 180) *
-        Math.cos(lat * Math.PI / 180) *
-        Math.sin(dLng / 2) ** 2;
-
-    const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    // < 1 km → m
-    if (d < 1) {
-        return Math.round(d * 1000) + " m";
-    }
-
-    // ≥ 1 km
-    return Math.round(d) + " km";
-}
-
-
-// =========================
 // GET — lire magasins
 // =========================
 async function getMagasins() {
@@ -77,7 +49,7 @@ async function deleteMagasin(code) {
 
 
 // =========================
-// RENDER TABLE
+// RENDER TABLE (route réelle ORS)
 // =========================
 async function loadMagasins() {
     const magasins = await getMagasins();
@@ -89,7 +61,7 @@ async function loadMagasins() {
     const tbody = document.querySelector("tbody");
     tbody.innerHTML = "";
 
-    magasins.slice(1).forEach(row => {
+    for (const row of magasins.slice(1)) {
 
         const code = row[0] ?? "";
         const fait = row[1] ?? false;
@@ -102,9 +74,22 @@ async function loadMagasins() {
         const lng = row[12] ?? null;
 
         const adresseComplete = `${adresse} ${cp} ${ville}`.trim();
-        const distance = calculDistance(lat, lng);
 
-        // Lien Waze
+        // =============================
+        // DISTANCE ROUTIÈRE (ORS)
+        // =============================
+        let distance = "-";
+
+        if (lat && lng && window.userLat && window.userLng) {
+            distance = await getRouteDistance(
+                window.userLat,
+                window.userLng,
+                lat,
+                lng
+            );
+        }
+
+        // URL Waze
         const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 
         const tr = document.createElement("tr");
@@ -117,7 +102,16 @@ async function loadMagasins() {
 
             <td>
                 <a class="waze-btn" href="${wazeUrl}" target="_blank">
-                    <i class="fa-brands fa-waze"></i>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                        <rect width="512" height="512" rx="20" fill="#33CCFF"/>
+                        <path fill="#FFFFFF" stroke="#000" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"
+                            d="M256 120c-75 0-136 61-136 136 0 35 12 68 33 93l-10 40h52l-4-25c19 7 39 11 61 11s42-4 61-11l-4 25h52l-10-40c21-25 33-58 33-93 0-75-61-136-136-136z"/>
+                        <circle cx="205" cy="250" r="22" fill="#000"/>
+                        <circle cx="307" cy="250" r="22" fill="#000"/>
+                        <path d="M205 320c18 20 46 30 75 30s57-10 75-30" stroke="#000" stroke-width="18" fill="none" stroke-linecap="round"/>
+                        <circle cx="180" cy="360" r="30" fill="#000"/>
+                        <circle cx="330" cy="360" r="30" fill="#000"/>
+                    </svg>
                 </a>
             </td>
 
@@ -130,7 +124,7 @@ async function loadMagasins() {
         `;
 
         tbody.appendChild(tr);
-    });
+    }
 }
 
 
@@ -153,10 +147,10 @@ navigator.geolocation.getCurrentPosition(
     pos => {
         window.userLat = pos.coords.latitude;
         window.userLng = pos.coords.longitude;
-        loadMagasins(); // 🔥 charger après GPS
+        loadMagasins();
     },
     () => {
-        console.warn("GPS refusé → distances impossibles");
-        loadMagasins(); // charge quand même
+        console.warn("GPS refusé → chargement sans distance");
+        loadMagasins();
     }
 );
