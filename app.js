@@ -14,34 +14,34 @@ let addressCache = {};
 
 
 // =====================================
-// HAVERSINE (km vol d’oiseau)
+// HAVERSINE
 // =====================================
 function haversine(lat1, lon1, lat2, lon2) {
     if (!lat1 || !lon1 || !lat2 || !lon2) return 99999;
 
     const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const dLat = (lat2 - lat1) * Math.PI/180;
+    const dLon = (lon2 - lon1) * Math.PI/180;
 
     const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat1 * Math.PI / 180) *
-        Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) ** 2;
+        Math.sin(dLat/2)**2 +
+        Math.cos(lat1*Math.PI/180) *
+        Math.cos(lat2*Math.PI/180) *
+        Math.sin(dLon/2)**2;
 
-    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
 
 // =====================================
-// ORS DISTANCE & TEMPS (limité pour pas exploser quota)
+// ORS DISTANCE + TEMPS
 // =====================================
 let lastORS = 0;
 
 async function getRouteDistance(lat1, lng1, lat2, lng2) {
-    const now = Date.now();
 
-    if (now - lastORS < 2000) return null; // 1 appel / 2 sec
+    const now = Date.now();
+    if (now - lastORS < 2000) return null; // 1 calcul / 2 sec
     lastORS = now;
 
     try {
@@ -65,15 +65,13 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
         const seconds = json.routes[0].summary.duration;
 
         const km = (meters / 1000).toFixed(1) + " km";
+        const min = Math.round(seconds / 60);
+        const h = Math.floor(min / 60);
+        const m = min % 60;
 
-        const minutes = Math.round(seconds / 60);
-        const h = Math.floor(minutes / 60);
-        const m = minutes % 60;
+        const duree = h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m} min`;
 
-        return { 
-            km, 
-            duree: h > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${m} min` 
-        };
+        return { km, duree };
 
     } catch {
         return null;
@@ -82,11 +80,10 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
 
 
 // =====================================
-// NORMALISATION ADRESSE (avec cache)
+// NORMALISATION ADRESSE + CACHE
 // =====================================
-async function normalizeAddress(ad, cp, ville) {
-
-    const key = ad + cp + ville;
+async function normalizeAddress(a, cp, v) {
+    const key = a + cp + v;
 
     if (addressCache[key]) return addressCache[key];
 
@@ -94,18 +91,19 @@ async function normalizeAddress(ad, cp, ville) {
         const res = await fetch(`${API}/geo`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query: `${ad}, ${cp} ${ville}` })
+            body: JSON.stringify({
+                query: `${a}, ${cp} ${v}`
+            })
         });
 
         const json = await res.json();
+        const final = json.length > 0 ? json[0].display_name : `${a}, ${cp} ${v}`;
 
-        const out = json.length > 0 ? json[0].display_name : `${ad}, ${cp} ${ville}`;
-
-        addressCache[key] = out;
-        return out;
+        addressCache[key] = final;
+        return final;
 
     } catch {
-        return `${ad}, ${cp} ${ville}`;
+        return `${a}, ${cp} ${v}`;
     }
 }
 
@@ -125,7 +123,7 @@ async function getMagasins() {
 
 
 // =====================================
-// UPDATE VISITE
+// SAUVEGARDE VISITE
 // =====================================
 async function toggleVisite(code, el) {
     await fetch(`${API}/updateVisite`, {
@@ -140,14 +138,12 @@ async function toggleVisite(code, el) {
 
 
 // =====================================
-// GESTION TRI
+// TRI PAR COLONNE
 // =====================================
 function sortBy(col) {
     if (sortCol === col) sortAsc = !sortAsc;
-    else {
-        sortCol = col;
-        sortAsc = true;
-    }
+    else { sortCol = col; sortAsc = true; }
+
     loadMagasins();
 }
 
@@ -162,7 +158,6 @@ async function loadMagasins() {
     tbody.innerHTML = "";
 
     let list = data.slice(1).map(r => ({
-        row: r,
         code: r[0],
         visite: (r[1] === true || r[1] === "TRUE"),
         nom: r[2],
@@ -172,27 +167,19 @@ async function loadMagasins() {
         ville: r[7],
         lat: Number(r[11]),
         lng: Number(r[12]),
-        dist: window.userLat ? haversine(window.userLat, window.userLng, r[11], r[12]) : 99999
+        dist: (window.userLat ? haversine(window.userLat, window.userLng, r[11], r[12]) : 99999)
     }));
 
+
     // TRI
-    if (sortCol === "code")
-        list.sort((a, b) => sortAsc ? a.code - b.code : b.code - a.code);
-
-    if (sortCol === "nom")
-        list.sort((a, b) => sortAsc ? a.nom.localeCompare(b.nom) : b.nom.localeCompare(a.nom));
-
-    if (sortCol === "type")
-        list.sort((a, b) => sortAsc ? a.type.localeCompare(b.type) : b.type.localeCompare(a.type));
-
-    if (sortCol === "visite")
-        list.sort((a, b) => sortAsc ? a.visite - b.visite : b.visite - a.visite);
-
-    if (sortCol === "km")
-        list.sort((a, b) => sortAsc ? a.dist - b.dist : b.dist - a.dist);
+    if (sortCol === "code") list.sort((a,b)=> sortAsc ? a.code - b.code : b.code - a.code);
+    if (sortCol === "nom") list.sort((a,b)=> sortAsc ? a.nom.localeCompare(b.nom) : b.nom.localeCompare(a.nom));
+    if (sortCol === "type") list.sort((a,b)=> sortAsc ? a.type.localeCompare(b.type) : b.type.localeCompare(a.type));
+    if (sortCol === "visite") list.sort((a,b)=> sortAsc ? a.visite - b.visite : b.visite - a.visite);
+    if (sortCol === "km") list.sort((a,b)=> sortAsc ? a.dist - b.dist : b.dist - a.dist);
 
 
-    // AFFICHAGE DES LIGNES
+    // AFFICHAGE LIGNES
     for (const m of list) {
 
         let kmTxt = "-";
@@ -200,10 +187,7 @@ async function loadMagasins() {
 
         if (gpsReady && m.lat && m.lng) {
             const info = await getRouteDistance(window.userLat, window.userLng, m.lat, m.lng);
-            if (info) {
-                kmTxt = info.km;
-                tempsTxt = info.duree;
-            }
+            if (info) { kmTxt = info.km; tempsTxt = info.duree; }
         }
 
         const fullAdr = await normalizeAddress(m.adresse, m.cp, m.ville);
@@ -251,5 +235,5 @@ function editMagasin(code) { location.href = `edit-magasin.html?code=${code}`; }
 function goAdd() { location.href = "add-magasin.html"; }
 
 
-// Démarrage
+// START
 loadMagasins();
