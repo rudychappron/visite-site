@@ -1,47 +1,47 @@
-// =========================
-// API Secure Worker
-// =========================
+// =====================================
+// CONFIG
+// =====================================
 const API = "https://winter-bar-234b.rudychappron.workers.dev";
 
-// POSITION GPS
 window.userLat = null;
 window.userLng = null;
 
 let gpsReady = false;
-let gpsUpdating = false;
+let sortCol = null;
+let sortAsc = true;
 
-// TRI
-let sortMode = "none"; // nom | type | visite | nonvisite | km
-let modeProximite = false;
-
-// CACHE adresse → pour accélérer
 let addressCache = {};
 
-// =========================
-// Haversine
-// =========================
+
+// =====================================
+// HAVERSINE (km vol d’oiseau)
+// =====================================
 function haversine(lat1, lon1, lat2, lon2) {
     if (!lat1 || !lon1 || !lat2 || !lon2) return 99999;
+
     const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI/180;
-    const dLon = (lon2 - lon1) * Math.PI/180;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
 
-    const a = Math.sin(dLat/2)**2 +
-              Math.cos(lat1*Math.PI/180) *
-              Math.cos(lat2*Math.PI/180) *
-              Math.sin(dLon/2)**2;
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) *
+        Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) ** 2;
 
-    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// =========================
-// ORS – Distance routière
-// =========================
+
+// =====================================
+// ORS DISTANCE & TEMPS (limité pour pas exploser quota)
+// =====================================
 let lastORS = 0;
 
 async function getRouteDistance(lat1, lng1, lat2, lng2) {
     const now = Date.now();
-    if (now - lastORS < 1200) return null;
+
+    if (now - lastORS < 2000) return null; // 1 appel / 2 sec
     lastORS = now;
 
     try {
@@ -57,8 +57,8 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
         });
 
         if (!res.ok) return null;
-        const json = await res.json();
 
+        const json = await res.json();
         if (!json.routes) return null;
 
         const meters = json.routes[0].summary.distance;
@@ -66,13 +66,13 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
 
         const km = (meters / 1000).toFixed(1) + " km";
 
-        const min = Math.round(seconds / 60);
-        const h = Math.floor(min / 60);
-        const m = min % 60;
+        const minutes = Math.round(seconds / 60);
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
 
-        return {
-            km,
-            duree: h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m} min`
+        return { 
+            km, 
+            duree: h > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${m} min` 
         };
 
     } catch {
@@ -81,104 +81,118 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
 }
 
 
-// =========================
-// Normalisation adresse (avec cache)
-// =========================
-async function normalizeAddress(adresse, cp, ville) {
-    const key = adresse + cp + ville;
+// =====================================
+// NORMALISATION ADRESSE (avec cache)
+// =====================================
+async function normalizeAddress(ad, cp, ville) {
+
+    const key = ad + cp + ville;
+
     if (addressCache[key]) return addressCache[key];
 
     try {
         const res = await fetch(`${API}/geo`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query: `${adresse}, ${cp} ${ville}` })
+            body: JSON.stringify({ query: `${ad}, ${cp} ${ville}` })
         });
 
         const json = await res.json();
-        const final = (json.length > 0 ? json[0].display_name : `${adresse}, ${cp} ${ville}`);
 
-        addressCache[key] = final;
-        return final;
+        const out = json.length > 0 ? json[0].display_name : `${ad}, ${cp} ${ville}`;
+
+        addressCache[key] = out;
+        return out;
 
     } catch {
-        return `${adresse}, ${cp} ${ville}`;
+        return `${ad}, ${cp} ${ville}`;
     }
 }
 
-// =========================
-// GET magasins
-// =========================
+
+// =====================================
+// GET MAGASINS
+// =====================================
 async function getMagasins() {
     try {
         const res = await fetch(`${API}/get`);
         const json = await res.json();
         return json.data || [];
-    } catch { return []; }
+    } catch {
+        return [];
+    }
 }
 
-// =========================
-// UPDATE VISITE ✔
-// =========================
-async function toggleVisite(code, checkbox) {
+
+// =====================================
+// UPDATE VISITE
+// =====================================
+async function toggleVisite(code, el) {
     await fetch(`${API}/updateVisite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             code,
-            fait: checkbox.checked === true
+            fait: el.checked
         })
     });
 }
 
 
-// =========================
-// APPLY SORT (liste déroulante)
-// =========================
-function applySort() {
-    sortMode = document.getElementById("sortSelect").value;
+// =====================================
+// GESTION TRI
+// =====================================
+function sortBy(col) {
+    if (sortCol === col) sortAsc = !sortAsc;
+    else {
+        sortCol = col;
+        sortAsc = true;
+    }
     loadMagasins();
 }
 
 
-// =========================
+// =====================================
 // AFFICHAGE TABLEAU
-// =========================
+// =====================================
 async function loadMagasins() {
 
     const data = await getMagasins();
     const tbody = document.querySelector("tbody");
     tbody.innerHTML = "";
 
-    let list = data.slice(1).map(row => ({
-        row,
-        code: row[0],
-        visite: (row[1] === true || row[1] === "TRUE"),
-        nom: row[2],
-        type: row[3],
-        adresse: row[5],
-        cp: row[6],
-        ville: row[7],
-        lat: Number(row[11]),
-        lng: Number(row[12]),
-        dist: (window.userLat ? haversine(window.userLat, window.userLng, row[11], row[12]) : 99999)
+    let list = data.slice(1).map(r => ({
+        row: r,
+        code: r[0],
+        visite: (r[1] === true || r[1] === "TRUE"),
+        nom: r[2],
+        type: r[3],
+        adresse: r[5],
+        cp: r[6],
+        ville: r[7],
+        lat: Number(r[11]),
+        lng: Number(r[12]),
+        dist: window.userLat ? haversine(window.userLat, window.userLng, r[11], r[12]) : 99999
     }));
 
-    // ======================
-    // TRI demandé
-    // ======================
-    if (sortMode === "nom") list.sort((a,b) => a.nom.localeCompare(b.nom));
-    if (sortMode === "type") list.sort((a,b) => a.type.localeCompare(b.type));
-    if (sortMode === "visite") list = list.filter(x => x.visite);
-    if (sortMode === "nonvisite") list = list.filter(x => !x.visite);
-    if (sortMode === "km") list.sort((a,b)=> a.dist - b.dist);
+    // TRI
+    if (sortCol === "code")
+        list.sort((a, b) => sortAsc ? a.code - b.code : b.code - a.code);
 
-    // Mode proximité (top 5)
-    if (modeProximite) list = list.slice(0,5);
+    if (sortCol === "nom")
+        list.sort((a, b) => sortAsc ? a.nom.localeCompare(b.nom) : b.nom.localeCompare(a.nom));
 
-    // ======================
-    // Construction des lignes
-    // ======================
+    if (sortCol === "type")
+        list.sort((a, b) => sortAsc ? a.type.localeCompare(b.type) : b.type.localeCompare(a.type));
+
+    if (sortCol === "visite")
+        list.sort((a, b) => sortAsc ? a.visite - b.visite : b.visite - a.visite);
+
+    if (sortCol === "km")
+        list.sort((a, b) => sortAsc ? a.dist - b.dist : b.dist - a.dist);
+
+
+    // AFFICHAGE DES LIGNES
     for (const m of list) {
 
         let kmTxt = "-";
@@ -192,54 +206,50 @@ async function loadMagasins() {
             }
         }
 
-        const adresseNorm = await normalizeAddress(m.adresse, m.cp, m.ville);
+        const fullAdr = await normalizeAddress(m.adresse, m.cp, m.ville);
+
         const waze = `https://waze.com/ul?ll=${m.lat},${m.lng}&navigate=yes`;
 
         const tr = document.createElement("tr");
+
         tr.innerHTML = `
-            <td>${m.code}</td>
+            <td onclick="sortBy('code')">${m.code}</td>
             <td><input type="checkbox" ${m.visite ? "checked" : ""} onchange="toggleVisite('${m.code}', this)"></td>
-            <td>${m.nom}</td>
-            <td>${m.type}</td>
-            <td>${adresseNorm}</td>
-            <td><a href="${waze}" target="_blank"><img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg" style="width:30px"></a></td>
-            <td>${kmTxt}</td>
+            <td onclick="sortBy('nom')">${m.nom}</td>
+            <td onclick="sortBy('type')">${m.type}</td>
+            <td>${fullAdr}</td>
+            <td><a href="${waze}" target="_blank"><img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg" width="30"></a></td>
+            <td onclick="sortBy('km')">${kmTxt}</td>
             <td>${tempsTxt}</td>
             <td><button onclick="editMagasin('${m.code}')">✏️</button></td>
         `;
+
         tbody.appendChild(tr);
     }
 }
 
 
-// =========================
-// GPS TEMPS RÉEL
-// =========================
+// =====================================
+// GPS
+// =====================================
 navigator.geolocation.watchPosition(
     pos => {
         window.userLat = pos.coords.latitude;
         window.userLng = pos.coords.longitude;
         gpsReady = true;
-
-        if (!gpsUpdating) {
-            gpsUpdating = true;
-            loadMagasins().then(()=> gpsUpdating=false);
-        }
+        loadMagasins();
     },
     err => console.warn("GPS refusé:", err),
     { enableHighAccuracy: true }
 );
 
 
-// =========================
+// =====================================
 // Navigation
-// =========================
+// =====================================
 function editMagasin(code) { location.href = `edit-magasin.html?code=${code}`; }
 function goAdd() { location.href = "add-magasin.html"; }
-function toggleView() { modeProximite = !modeProximite; loadMagasins(); }
 
 
-// =========================
-// PREMIER AFFICHAGE
-// =========================
+// Démarrage
 loadMagasins();
