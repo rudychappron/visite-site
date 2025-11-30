@@ -206,14 +206,6 @@ async function refreshPosition() {
 }
 
 // =========================
-// AUTO-REFRESH – 60s
-// =========================
-setInterval(() => {
-    console.log("🔄 Auto-refresh position…");
-    refreshPosition();
-}, 60000);
-
-// =========================
 // NAVIGATION
 // =========================
 function editMagasin(code) { window.location.href = `edit-magasin.html?code=${code}`; }
