@@ -34,6 +34,59 @@ async function normalizeAddress(adresse, cp, ville) {
 }
 
 
+// ============================
+// ORS - Distance + Durée
+// ============================
+async function getRouteDistance(lat1, lng1, lat2, lng2) {
+    try {
+        const url = "https://api.openrouteservice.org/v2/directions/driving-car";
+
+        const body = {
+            coordinates: [
+                [lng1, lat1],
+                [lng2, lat2]
+            ]
+        };
+
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Authorization": ORS_API_KEY,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(body)
+        });
+
+        const json = await res.json();
+        if (!json.routes || !json.routes[0]) return null;
+
+        // Distance
+        const meters = json.routes[0].summary.distance;
+        const km = (meters / 1000).toFixed(1) + " km";
+
+        // Durée
+        const seconds = json.routes[0].summary.duration;
+        const minutes = Math.round(seconds / 60);
+
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+
+        let dureeTxt = (h > 0)
+            ? `${h}h${String(m).padStart(2, "0")}`
+            : `${m} min`;
+
+        return {
+            km: km,
+            duree: dureeTxt
+        };
+
+    } catch (e) {
+        console.error("❌ ORS erreur :", e);
+        return null;
+    }
+}
+
+
 // =========================
 // GET — lire magasins
 // =========================
@@ -63,16 +116,16 @@ async function deleteMagasin(code) {
 
 
 // =========================
-// UPDATE VISITE magasin — CORRIGÉ
+// UPDATE VISITE magasin
 // =========================
 async function toggleVisite(code, visited) {
     try {
-        await fetch(`${API}/updateVisite`, {   // ← ICI ✔
+        await fetch(`${API}/updateVisite`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 code: code,
-                fait: visited                // ← Apps Script veut TRUE/FALSE natif
+                fait: visited
             })
         });
 
@@ -108,15 +161,22 @@ async function loadMagasins() {
         // Adresse normalisée
         const adresseComplete = await normalizeAddress(adresse, cp, ville);
 
-        // Distance ORS
-        let distance = "-";
+        // Distance + Temps ORS
+        let kmTxt = "-";
+        let tempsTxt = "-";
+
         if (lat && lng && window.userLat && window.userLng) {
-            distance = await getRouteDistance(
+            const info = await getRouteDistance(
                 window.userLat,
                 window.userLng,
                 lat,
                 lng
             );
+
+            if (info) {
+                kmTxt = info.km;
+                tempsTxt = info.duree;
+            }
         }
 
         // URL Waze
@@ -145,7 +205,8 @@ async function loadMagasins() {
                 </a>
             </td>
 
-            <td>${distance}</td>
+            <td>${kmTxt}</td>
+            <td>${tempsTxt}</td>
 
             <td>
                 <button onclick="editMagasin('${code}')">✏️</button>
