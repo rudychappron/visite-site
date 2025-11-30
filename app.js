@@ -21,12 +21,12 @@ navigator.geolocation.getCurrentPosition(
 
 
 // =========================
-// CALCUL DISTANCE AU MÈTRE / KILOMÈTRE
+// CALCUL DISTANCE (avec km/m)
 // =========================
 function calculDistance(lat, lng) {
     if (!lat || !lng || !window.userLat || !window.userLng) return "-";
 
-    const R = 6371000; // rayon Terre en MÈTRES
+    const R = 6371;
     const dLat = (lat - window.userLat) * Math.PI / 180;
     const dLng = (lng - window.userLng) * Math.PI / 180;
 
@@ -36,14 +36,14 @@ function calculDistance(lat, lng) {
         Math.cos(lat * Math.PI / 180) *
         Math.sin(dLng / 2) ** 2;
 
-    const distanceM = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    // 🔥 Format intelligent
-    if (distanceM < 1000) {
-        return Math.round(distanceM) + " m";  // Exemple : 450 m
-    } else {
-        return (distanceM / 1000).toFixed(1) + " km"; // Exemple : 1.3 km
+    // ➜ d est en kilomètres → conversion m ou km
+    if (d < 1) {
+        return Math.round(d * 1000) + " m"; // ex : 0.34 km → 340 m
     }
+
+    return Math.round(d) + " km"; // ex : 33.9 → 34 km
 }
 
 
@@ -63,14 +63,8 @@ async function getMagasins() {
 
     console.log("Réponse API brute :", json);
 
-    // Ton Worker renvoie DIRECTEMENT un tableau de lignes
-    if (Array.isArray(json)) {
-        return json;
-    }
-
-    if (json.data) {
-        return json.data;
-    }
+    if (Array.isArray(json)) return json;
+    if (json.data) return json.data;
 
     return [];
 }
@@ -91,7 +85,7 @@ async function deleteMagasin(code) {
 
 
 // =========================
-// AFFICHAGE DU TABLEAU
+// RENDER TABLE
 // =========================
 async function loadMagasins() {
     const magasins = await getMagasins();
@@ -103,7 +97,6 @@ async function loadMagasins() {
     const tbody = document.querySelector("tbody");
     tbody.innerHTML = "";
 
-    // on saute la première ligne (en-têtes)
     magasins.slice(1).forEach(row => {
 
         const code = row[0] ?? "";
