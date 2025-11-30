@@ -97,7 +97,7 @@ async function loadMagasins() {
         const nomComplet = row[2] ?? "";
         const type = row[3] ?? "";
         const adresse = row[5] ?? "";
-        const cp = row[6] ?? "";
+        const cp = String(row[6] ?? "").padStart(5, "0");
         const ville = row[7] ?? "";
         const lat = row[11] ?? null;
         const lng = row[12] ?? null;
