@@ -21,12 +21,12 @@ navigator.geolocation.getCurrentPosition(
 
 
 // =========================
-// CALCUL DISTANCE
+// CALCUL DISTANCE AU MÈTRE / KILOMÈTRE
 // =========================
 function calculDistance(lat, lng) {
     if (!lat || !lng || !window.userLat || !window.userLng) return "-";
 
-    const R = 6371;
+    const R = 6371000; // rayon Terre en MÈTRES
     const dLat = (lat - window.userLat) * Math.PI / 180;
     const dLng = (lng - window.userLng) * Math.PI / 180;
 
@@ -36,7 +36,14 @@ function calculDistance(lat, lng) {
         Math.cos(lat * Math.PI / 180) *
         Math.sin(dLng / 2) ** 2;
 
-    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    const distanceM = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    // 🔥 Format intelligent
+    if (distanceM < 1000) {
+        return Math.round(distanceM) + " m";  // Exemple : 450 m
+    } else {
+        return (distanceM / 1000).toFixed(1) + " km"; // Exemple : 1.3 km
+    }
 }
 
 
@@ -61,7 +68,6 @@ async function getMagasins() {
         return json;
     }
 
-    // Si ton Apps Script est modifié plus tard
     if (json.data) {
         return json.data;
     }
@@ -85,7 +91,7 @@ async function deleteMagasin(code) {
 
 
 // =========================
-// RENDER TABLE
+// AFFICHAGE DU TABLEAU
 // =========================
 async function loadMagasins() {
     const magasins = await getMagasins();
@@ -148,4 +154,3 @@ function goAdd() {
 // CHARGEMENT AUTO
 // =========================
 loadMagasins();
-
