@@ -1,5 +1,5 @@
 // HASH SHA-256 
-const HASH = "91f9d5e7e7730f83b8a7a830180ba893bb8e2ad067361e5b1862f08e5ad96507";
+const HASH = "2a6cdd3069d05b464c42d7762a72b88c7f7e39a32256bec00afc6ec42487c1ea";
 
 // Fonction hash
 async function sha256(str) {
