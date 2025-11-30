@@ -7,7 +7,7 @@
 
 <link rel="stylesheet" href="styles.css">
 
-<!-- Icônes FontAwesome (pour style pro si tu ajoutes des icônes) -->
+<!-- Icônes FontAwesome -->
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
@@ -41,20 +41,19 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
         <label>Ville</label>
         <input id="ville" placeholder="Ex : Lyon">
 
-        <!-- FUTUR (optionnel) : coordonnées GPS
-        <label>Latitude</label>
-        <input id="lat">
-        <label>Longitude</label>
-        <input id="lon">
-        -->
-
         <button class="btn-primary" onclick="addMagasin()">
             <i class="fa-solid fa-check"></i> Enregistrer
         </button>
     </div>
 </div>
 
+<!-- 1️⃣ Authentification -->
 <script src="auth.js"></script>
+
+<!-- 2️⃣ 🔐 Secure API — fichier PRIVÉ -->
+<script src="https://raw.githubusercontent.com/rudychappron/VISITE-/refs/heads/main/app-secure.js?token=GHSAT0AAAAAADQJ4TL54V57ZVNNMWB2LGFW2JMGLTA"></script>
+
+<!-- 3️⃣ ⭐ Application — fichier PUBLIC -->
 <script src="app.js"></script>
 
 </body>
