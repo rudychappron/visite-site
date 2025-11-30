@@ -3,22 +3,58 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Modifier un magasin</title>
+<title>Modifier un magasin — Outil Rudy</title>
+
 <link rel="stylesheet" href="styles.css">
+
+<!-- Icônes PRO -->
+<link rel="stylesheet" 
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 </head>
 
 <body>
 
-<h2>Modifier le magasin</h2>
+<header class="header">
+    <h1>Modifier le magasin</h1>
 
-<div class="form">
-    <input id="code" disabled>
-    <input id="nom">
-    <input id="type">
-    <input id="adresse">
-    <input id="cp">
-    <input id="ville">
-    <button onclick="saveEdit()">💾 Sauvegarder</button>
+    <div>
+        <button class="logout-btn" onclick="logout()">
+            <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+        </button>
+    </div>
+</header>
+
+<div class="form-container">
+    <div class="form">
+
+        <label>Code magasin</label>
+        <input id="code" disabled>
+
+        <label>Nom</label>
+        <input id="nom">
+
+        <label>Type</label>
+        <input id="type">
+
+        <label>Adresse</label>
+        <input id="adresse">
+
+        <label>Code postal</label>
+        <input id="cp">
+
+        <label>Ville</label>
+        <input id="ville">
+
+        <button class="btn-primary" onclick="saveEdit()">
+            <i class="fa-solid fa-floppy-disk"></i> Sauvegarder
+        </button>
+
+        <button class="btn-primary" style="background:#555;margin-top:10px" onclick="location.href='dashboard.html'">
+            <i class="fa-solid fa-arrow-left"></i> Retour
+        </button>
+
+    </div>
 </div>
 
 <script src="auth.js"></script>
