@@ -16,15 +16,18 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
 <body>
 
 <header class="header">
-  <h1>Liste des magasins</h1>
-  <button class="logout-btn" onclick="logout()">
-    <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
-  </button>
+    <h1>Liste des magasins</h1>
+
+    <button class="logout-btn" onclick="logout()">
+        <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+    </button>
 </header>
 
 <!-- BARRE D’OUTILS -->
 <div class="toolbar">
-    <input id="search" type="text" placeholder="Rechercher…" onkeyup="searchMagasins()">
+
+    <input id="search" type="text" placeholder="Rechercher…" 
+           onkeyup="searchMagasins()">
 
     <button class="btn-primary" onclick="goAdd()">
         <i class="fa-solid fa-plus"></i> Ajouter
@@ -35,25 +38,27 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     </button>
 </div>
 
-<!-- TABLEAU PRO -->
+<!-- TABLEAU MAGASINS -->
 <table class="magasins-table">
     <thead>
-      <tr>
-        <th>Code</th>
-        <th>Visité</th>
-        <th>Nom</th>
-        <th>Type</th>
-        <th>Adresse</th>
-        <th>Ville</th>
-        <th>KM</th>
-        <th>Actions</th>
-      </tr>
+        <tr>
+            <th>Code</th>
+            <th>Visité</th>
+            <th>Nom</th>
+            <th>Type</th>
+            <th>Adresse</th>
+            <th>Ville</th>
+            <th>KM</th>
+            <th>Actions</th>
+        </tr>
     </thead>
+
     <tbody></tbody>
 </table>
 
-<script src="auth.js"></script>
-<script src="app.js"></script>
+<!-- SCRIPTS -->
+<script src="auth.js?v=1"></script>
+<script src="app.js?v=1"></script>
 
 </body>
 </html>
