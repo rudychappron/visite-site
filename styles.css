@@ -1,144 +1,277 @@
-/***********************************************************
- * STYLE PRO — LISTE MAGASINS
- ***********************************************************/
-
-#list {
-    padding: 20px;
+/* =========================================================
+   GLOBAL — THEME DARK FUTURISTE 2030
+========================================================= */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
 }
 
-/* Carte */
+body {
+  background: #0b0d11;
+  color: #e5e7eb;
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+/* Glow néon principal */
+:root {
+  --neon-blue: #4b6bff;
+  --neon-purple: #9b4bff;
+  --neon-cyan: #4bffe6;
+  --panel-bg: rgba(255,255,255,0.04);
+  --border-glow: 0 0 12px rgba(100, 130, 255, 0.5);
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+.header {
+  background: rgba(255,255,255,0.02);
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+}
+
+.header h1 {
+  font-size: 1.7rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.logout-btn {
+  background: transparent;
+  border: 1px solid var(--neon-blue);
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: var(--neon-blue);
+  cursor: pointer;
+  transition: 0.25s;
+}
+
+.logout-btn:hover {
+  background: var(--neon-blue);
+  color: #000;
+  box-shadow: var(--border-glow);
+}
+
+/* =========================================================
+   TOOLBAR (Recherche / Filtres / Ajouter)
+========================================================= */
+.toolbar {
+  display: flex;
+  gap: 12px;
+  padding: 15px;
+  margin: 14px;
+  background: var(--panel-bg);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  box-shadow: var(--border-glow);
+  backdrop-filter: blur(12px);
+  flex-wrap: wrap;
+}
+
+.toolbar input,
+.toolbar select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(30,30,40,0.6);
+  color: #fff;
+  flex: 1;
+}
+
+.btn-primary {
+  background: linear-gradient(90deg, var(--neon-purple), var(--neon-blue));
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #fff;
+  font-weight: 600;
+  transition: 0.2s;
+  box-shadow: 0 0 12px rgba(120, 80, 255, 0.5);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 16px rgba(140, 90, 255, 0.7);
+}
+
+/* =========================================================
+   CARTE MAGASIN
+========================================================= */
+.magasins-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(330px,1fr));
+  gap: 18px;
+  padding: 20px;
+}
+
 .magasin-card {
-    background: #ffffff;
-    padding: 18px 20px;
-    margin-bottom: 18px;
-    border-radius: 14px;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.08);
-    transition: 0.2s;
-    border: 1px solid #e8e8e8;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 18px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 20px rgba(60, 90, 255, 0.15);
+  transition: 0.25s;
 }
 
 .magasin-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+  transform: scale(1.03);
+  box-shadow: 0 0 28px rgba(100,130,255,0.5);
 }
 
-/* Header de carte */
 .mag-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
 }
 
 .mag-header h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
+  font-size: 1.2rem;
+  font-weight: 600;
+  background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
-/* Badge Visité */
-.visit-toggle {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 15px;
-}
-
-.visit-toggle input {
-    transform: scale(1.2);
-}
-
-/* Adresse */
 .adresse {
-    margin: 8px 0 5px 0;
-    font-size: 14px;
-    color: #555;
+  font-size: .9rem;
+  opacity: 0.8;
+  margin-bottom: 8px;
 }
 
-/* Distance */
+/* DISTANCE */
 .distance {
-    font-size: 15px;
-    margin: 5px 0 15px 0;
-    font-weight: 500;
+  font-size: .95rem;
+  color: var(--neon-cyan);
+  margin-bottom: 14px;
 }
 
-/* Zone d’action */
+/* =========================================================
+   ACTIONS (Boutons sur chaque carte)
+========================================================= */
 .actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
 }
 
-/* Bouton Waze logo officiel */
-.btn-waze {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: #03a9f4;
-    color: white;
-    padding: 10px 14px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 600;
-    transition: 0.2s;
-}
-
-.btn-waze:hover {
-    background: #0288d1;
-}
-
-/* Icône Waze */
-.btn-waze::before {
-    content: "";
-    display: inline-block;
-    width: 22px;
-    height: 22px;
-    background-image: url("https://upload.wikimedia.org/wikipedia/commons/2/2c/Waze_Logo.svg");
-    background-size: contain;
-    background-repeat: no-repeat;
-}
-
-/* Bouton Modifier */
-.btn-edit {
-    background: #ffd54f;
-    border: none;
-    padding: 10px 14px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.btn-edit:hover {
-    background: #ffca28;
-}
-
-/* Bouton Supprimer */
+.btn-waze,
+.btn-edit,
 .btn-delete {
-    background: #e53935;
-    border: none;
-    padding: 10px 14px;
-    border-radius: 8px;
-    color: white;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: .85rem;
+  font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: 0.2s;
 }
 
+/* WAZE = Cyan Glow */
+.btn-waze {
+  background: rgba(0,255,255,0.12);
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+.btn-waze:hover {
+  background: var(--neon-cyan);
+  color: #000;
+  box-shadow: 0 0 12px var(--neon-cyan);
+}
+
+/* EDIT = Bleu Violet */
+.btn-edit {
+  background: rgba(90,80,255,0.12);
+  border-color: var(--neon-blue);
+  color: var(--neon-blue);
+}
+.btn-edit:hover {
+  background: var(--neon-blue);
+  color: #000;
+  box-shadow: 0 0 12px var(--neon-blue);
+}
+
+/* DELETE = Rouge Néon */
+.btn-delete {
+  background: rgba(255,50,50,0.12);
+  border-color: #f44;
+  color: #f44;
+}
 .btn-delete:hover {
-    background: #c62828;
+  background: #f44;
+  color: #000;
+  box-shadow: 0 0 12px rgba(255,60,60,0.7);
 }
 
-/* Responsive */
-@media (max-width: 600px) {
-    .actions {
-        flex-direction: column;
-        width: 100%;
-    }
+/* SWITCH VISITÉ */
+.visit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
-    .actions button,
-    .actions a {
-        width: 100%;
-        text-align: center;
-    }
+.visit-toggle input[type=checkbox] {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+
+/* =========================================================
+   FORM PAGES (add + edit)
+========================================================= */
+.form-container {
+  padding: 20px;
+}
+
+.form {
+  background: var(--panel-bg);
+  padding: 22px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: var(--border-glow);
+  max-width: 450px;
+  margin: auto;
+}
+
+.form label {
+  margin-top: 12px;
+  display: block;
+  font-size: .9rem;
+  opacity: 0.8;
+}
+
+.form input {
+  width: 100%;
+  margin-top: 5px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(30,30,40,0.6);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff;
+}
+
+/* SECONDARY BUTTON */
+.btn-secondary {
+  margin-top: 12px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 10px 18px;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.2);
 }
