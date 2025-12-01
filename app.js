@@ -1,5 +1,5 @@
-const HERE_API_KEY = "TA_CLE_HERE";
-const APPS_SCRIPT_URL = "TON_URL_WEBAPP";
+const HERE_API_KEY = "5TuJy6GHPhdQDvXGdFa8Hq984DX0NsSGvl3dRZjx0uo";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzcUr84EJSS0ngVtLT2d5NFSIp24hCJNDgAShacHvClGUW8Kek4ZtXVlJGekIy2shSUIw/exec";
 
 // =============================
 // Charger les magasins
