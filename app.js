@@ -8,18 +8,16 @@ const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwSHdLecIBM3RcVFyzQpm8Xrj2aKiyK-seP6upTjY0Wf-CWklBDdBr9x5DlbVx4znafGQ/exec";
 
 /***********************************************************
- * CHARGER LES MAGASINS (GET)
+ * CHARGEMENT MAGASINS
  ***********************************************************/
 async function loadMagasins() {
   try {
-    const url =
-      `${APPS_SCRIPT_URL}?origin=${encodeURIComponent(ALLOWED_ORIGIN)}`;
-
+    const url = `${APPS_SCRIPT_URL}?origin=${encodeURIComponent(ALLOWED_ORIGIN)}`;
     const res = await fetch(url);
     const json = await res.json();
 
     if (!json.ok) {
-      alert("Erreur API : " + (json.error || "inconnue"));
+      alert("Erreur API");
       return;
     }
 
@@ -29,12 +27,52 @@ async function loadMagasins() {
 
   } catch (e) {
     console.error(e);
-    alert("Erreur réseau : impossible de charger les magasins.");
+    alert("Erreur réseau");
   }
 }
 
 /***********************************************************
- * API HERE — ROUTE / TEMPS
+ * UPDATE VISITÉ
+ ***********************************************************/
+async function toggleVisite(index, checked) {
+  const row = window.magasins[index];
+
+  row[1] = checked; // colonne FAIT
+
+  await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "update",
+      index: index + 1,
+      row,
+      origin: ALLOWED_ORIGIN
+    })
+  });
+
+  console.log("Visité mis à jour !");
+}
+
+/***********************************************************
+ * SUPPRESSION
+ ***********************************************************/
+async function deleteMagasin(index) {
+  if (!confirm("Supprimer ce magasin ?")) return;
+
+  await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "delete",
+      index: index + 1,
+      origin: ALLOWED_ORIGIN
+    })
+  });
+
+  window.magasins.splice(index, 1);
+  renderList();
+}
+
+/***********************************************************
+ * ROUTE HERE
  ***********************************************************/
 async function getRoute(lat1, lng1, lat2, lng2) {
   if (!lat2 || !lng2) return null;
@@ -70,50 +108,41 @@ function wazeLink(lat, lng) {
  ***********************************************************/
 function initFilters() {
   const types = [...new Set(window.magasins.map(m => m[3]).filter(Boolean))];
+  const sel = document.getElementById("filterType");
 
-  const select = document.getElementById("filterType");
-  select.innerHTML = `<option value="all">Tous les types</option>`;
-
-  types.forEach(t => {
-    select.innerHTML += `<option value="${t}">${t}</option>`;
-  });
+  sel.innerHTML = `<option value="all">Tous les types</option>`;
+  types.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
 }
 
 function applyFilters(list) {
-
   const txt = document.getElementById("search").value.toLowerCase();
   const fVisite = document.getElementById("filterVisite").value;
   const fType = document.getElementById("filterType").value;
 
-  if (txt !== "") {
+  if (txt)
     list = list.filter(m =>
       (m[2] || "").toLowerCase().includes(txt) ||
       (m[5] || "").toLowerCase().includes(txt) ||
       (m[7] || "").toLowerCase().includes(txt)
     );
-  }
 
   if (fVisite === "visite") list = list.filter(m => m[1] === true);
   if (fVisite === "nonvisite") list = list.filter(m => m[1] === false);
 
-  if (fType !== "all") {
-    list = list.filter(m => (m[3] || "") === fType);
-  }
+  if (fType !== "all")
+    list = list.filter(m => m[3] === fType);
 
   return list;
 }
 
 /***********************************************************
- * AFFICHAGE DES CARTES
+ * AFFICHAGE LISTE
  ***********************************************************/
 async function renderList() {
-
   const container = document.getElementById("list");
-  if (!container) return;
   container.innerHTML = "Chargement…";
 
   navigator.geolocation.getCurrentPosition(async pos => {
-
     const latUser = pos.coords.latitude;
     const lngUser = pos.coords.longitude;
 
@@ -124,7 +153,6 @@ async function renderList() {
     for (const m of filtered) {
 
       const index = window.magasins.indexOf(m);
-
       const lat = m[11];
       const lng = m[12];
 
@@ -137,23 +165,35 @@ async function renderList() {
       card.innerHTML = `
         <div class="mag-header">
           <h3>${m[2] || "Nom manquant"}</h3>
+
+          <label class="visit-toggle">
+            <input type="checkbox" ${m[1] ? "checked" : ""} 
+                   onchange="toggleVisite(${index}, this.checked)">
+            <span>Visité</span>
+          </label>
         </div>
 
         <p class="adresse">${m[5] || ""} ${m[6] || ""} ${m[7] || ""}</p>
 
         ${route ?
-          `<p class="distance">📍 ${route.km} km — ⏱ ${route.minutes} min</p>` :
-          `<p class="distance">📍 Distance non disponible</p>`
-        }
+          `<p class="distance">📍 ${route.km} km | ⏱ ${route.minutes} min</p>` :
+          `<p class="distance">📍 Distance inconnue</p>`}
 
         <div class="actions">
           <a href="${wazeLink(lat, lng)}" target="_blank" class="btn-waze">Waze</a>
+
+          <button class="btn-edit" onclick="goEdit('${m[0]}')">
+            Modifier
+          </button>
+
+          <button class="btn-delete" onclick="deleteMagasin(${index})">
+            Supprimer
+          </button>
         </div>
       `;
 
       container.appendChild(card);
     }
-
   });
 }
 
@@ -163,15 +203,10 @@ async function renderList() {
 function goAdd() {
   location.href = "add-magasin.html";
 }
-
 function goEdit(code) {
   localStorage.setItem("editCode", code);
   location.href = "edit-magasin.html";
 }
-
-/***********************************************************
- * LOGOUT
- ***********************************************************/
 function logout() {
   localStorage.removeItem("session");
   location.href = "index.html";
