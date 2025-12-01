@@ -1,5 +1,5 @@
 /***************************************************
- * PARTIE 1 — CONFIG + OUTILS
+ * CONFIG — OSRM WORKER VERSION
  ***************************************************/
 const API = "https://winter-bar-234b.rudychappron.workers.dev";
 
@@ -7,7 +7,7 @@ window.userLat = null;
 window.userLng = null;
 
 let gpsReady = false;
-let sortCol = "vol";      // tri par défaut = distance vol d’oiseau
+let sortCol = null;
 let sortAsc = true;
 
 let addressCache = {};
@@ -15,75 +15,8 @@ let fullMagList = [];
 let typeList = [];
 
 
-
 /***************************************************
- * HAVERSINE — VOL D’OISEAU
- ***************************************************/
-function haversine(lat1, lon1, lat2, lon2) {
-    if (!lat1 || !lon1 || !lat2 || !lon2) return 99999;
-
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI/180;
-    const dLon = (lon2 - lon1) * Math.PI/180;
-
-    const a =
-        Math.sin(dLat/2)**2 +
-        Math.cos(lat1*Math.PI/180) *
-        Math.cos(lat2*Math.PI/180) *
-        Math.sin(dLon/2)**2;
-
-    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
-
-
-/***************************************************
- * ORS — DISTANCE ROUTE (FAIBLE FRÉQUENCE)
- ***************************************************/
-let lastORS = 0;
-
-async function getRouteDistance(lat1, lng1, lat2, lng2) {
-    const now = Date.now();
-    if (now - lastORS < 1200) return null;
-    lastORS = now;
-
-    try {
-        const res = await fetch(`${API}/ors`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                coordinates: [
-                    [lng1, lat1],
-                    [lng2, lat2]
-                ]
-            })
-        });
-
-        if (!res.ok) return null;
-        const json = await res.json();
-        if (!json.routes) return null;
-
-        const meters = json.routes[0].summary.distance;
-        const seconds = json.routes[0].summary.duration;
-
-        const km = (meters / 1000).toFixed(1) + " km";
-        const min = Math.round(seconds / 60);
-        const h = Math.floor(min / 60);
-        const m = min % 60;
-
-        const duree = h > 0 ? `${h}h${String(m).padStart(2,"0")}` : `${m} min`;
-
-        return { km, duree };
-
-    } catch {
-        return null;
-    }
-}
-
-
-
-/***************************************************
- * ADRESSE NORMALISÉE + CACHE
+ * NORMALISATION ADRESSE + CACHE
  ***************************************************/
 async function normalizeAddress(a, cp, v) {
     const key = a + cp + v;
@@ -94,9 +27,7 @@ async function normalizeAddress(a, cp, v) {
         const res = await fetch(`${API}/geo`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                query: `${a}, ${cp} ${v}`
-            })
+            body: JSON.stringify({ query: `${a}, ${cp} ${v}` })
         });
 
         const json = await res.json();
@@ -111,54 +42,39 @@ async function normalizeAddress(a, cp, v) {
 }
 
 
-
 /***************************************************
- * GET MAGASINS
+ * GET MAGASINS — VERSION OSRM (tri serveur)
  ***************************************************/
 async function getMagasins() {
+    if (!gpsReady) return [];
+
     try {
-        const res = await fetch(`${API}/get`);
+        const res = await fetch(`${API}/get?lat=${window.userLat}&lng=${window.userLng}`);
         const json = await res.json();
         return json.data || [];
     } catch {
+        console.warn("Erreur GET /get");
         return [];
     }
 }
 
 
-
 /***************************************************
- * SAVE VISITE
+ * SAUVEGARDE VISITE
  ***************************************************/
 async function toggleVisite(code, el) {
     await fetch(`${API}/updateVisite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            code,
-            fait: el.checked
-        })
+        body: JSON.stringify({ code, fait: el.checked })
     });
-
-    // Ne PAS recharger tableau : pas besoin
 }
 
 
+
 /***************************************************
- * PARTIE 2 — RECHERCHE + FILTRES + TRI + AFFICHAGE
+ * TRI LOCAL — uniquement sur colonnes simples
  ***************************************************/
-
-
-/***********************
- * Recherche / Filtres
- ***********************/
-function onSearchChange() { renderTable(); }
-function onFilterChange() { renderTable(); }
-
-
-/***********************
- * TRI
- ***********************/
 function sortBy(col) {
     if (sortCol === col) sortAsc = !sortAsc;
     else { sortCol = col; sortAsc = true; }
@@ -167,9 +83,15 @@ function sortBy(col) {
 }
 
 
+/***************************************************
+ * RECHERCHE ET FILTRES
+ ***************************************************/
+function onSearchChange() { renderTable(); }
+function onFilterChange() { renderTable(); }
+
 
 /***************************************************
- * RENDER TABLE — GÉNÈRE LE TABLEAU UNE SEULE FOIS
+ * RENDER TABLE — VERSION OSRM
  ***************************************************/
 async function renderTable() {
 
@@ -180,7 +102,7 @@ async function renderTable() {
     const fVisite = document.getElementById("filterVisite").value;
     const fType = document.getElementById("filterType").value;
 
-    // Construction de la liste
+    // Liste préparée par le WORKER (tri GPS + OSRM 20 premiers)
     let list = fullMagList.map(r => ({
         code: r.code,
         visite: r.visite,
@@ -191,12 +113,14 @@ async function renderTable() {
         ville: r.ville,
         lat: r.lat,
         lng: r.lng,
-        distVoie: (window.userLat ? haversine(window.userLat, window.userLng, r.lat, r.lng) : 99999)
+        vol: r.vol,        // distance vol d’oiseau (serveur)
+        km: r.km,          // distance route OSRM (serveur)
+        duree: r.duree     // temps route OSRM (serveur)
     }));
 
 
     /***********************
-     * 1️⃣ Filtre recherche
+     * 1️⃣ RECHERCHE
      ***********************/
     list = list.filter(m =>
         m.code.toString().includes(search) ||
@@ -207,41 +131,34 @@ async function renderTable() {
 
 
     /***********************
-     * 2️⃣ Filtre Visite
+     * 2️⃣ FILTRE VISITE
      ***********************/
     if (fVisite === "visite") list = list.filter(m => m.visite);
     if (fVisite === "nonvisite") list = list.filter(m => !m.visite);
 
 
     /***********************
-     * 3️⃣ Filtre Type dynamique
+     * 3️⃣ FILTRE TYPE
      ***********************/
     if (fType !== "all") list = list.filter(m => m.type === fType);
 
 
-
     /***********************
-     * 4️⃣ TRI
+     * 4️⃣ TRI LOCAL (optionnel)
      ***********************/
     if (sortCol === "code") list.sort((a,b)=> sortAsc ? a.code - b.code : b.code - a.code);
     if (sortCol === "nom") list.sort((a,b)=> sortAsc ? a.nom.localeCompare(b.nom) : b.nom.localeCompare(a.nom));
     if (sortCol === "type") list.sort((a,b)=> sortAsc ? a.type.localeCompare(b.type) : b.type.localeCompare(a.type));
     if (sortCol === "visite") list.sort((a,b)=> sortAsc ? a.visite - b.visite : b.visite - a.visite);
-
-    // 🔥 TRI PAR DÉFAUT = distance vol d'oiseau
-    if (sortCol === "vol") list.sort((a,b)=> sortAsc ? a.distVoie - b.distVoie : b.distVoie - a.distVoie);
+    // VOL, KM, TEMPS NE SONT PLUS TRIÉS ICI (déjà triés côté serveur)
 
 
-
-    /***************************************************
-     * 5️⃣ GENERATION DES LIGNES
-     ***************************************************/
+    /***********************
+     * 5️⃣ CREATION DES LIGNES
+     ***********************/
     for (const m of list) {
 
-        // Adresse normalisée (en cache instant)
         const fullAdr = await normalizeAddress(m.adresse, m.cp, m.ville);
-
-        // Lien waze
         const waze = `https://waze.com/ul?ll=${m.lat},${m.lng}&navigate=yes`;
 
         const tr = document.createElement("tr");
@@ -260,21 +177,13 @@ async function renderTable() {
 
             <td>
                 <a href="${waze}" target="_blank">
-                    <img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg"
-                         width="30">
+                    <img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg" width="30">
                 </a>
             </td>
 
-            <!-- 🔥 Distance vol d’oiseau -->
-            <td class="volCell" data-code="${m.code}">
-                ${m.distVoie.toFixed(1)} km
-            </td>
-
-            <!-- 🔥 Distance ORS (mise à jour auto) -->
-            <td class="kmCell" data-code="${m.code}">-</td>
-
-            <!-- 🔥 Temps ORS (mise à jour auto) -->
-            <td class="timeCell" data-code="${m.code}">-</td>
+            <td>${m.vol ? m.vol.toFixed(1) + " km" : "-" }</td>
+            <td>${m.km || "-"}</td>
+            <td>${m.duree || "-"}</td>
 
             <td>
                 <button onclick="editMagasin('${m.code}')">✏️</button>
@@ -288,12 +197,16 @@ async function renderTable() {
 
 
 /***************************************************
- * INITIALISATION — GET + TYPES DYNAMIQUES
+ * INITIALISATION — GET + TYPES
  ***************************************************/
 async function initMagasins() {
 
+    // Attendre GPS
+    if (!gpsReady) return;
+
     const raw = await getMagasins();
 
+    // raw = [ header, row1, row2, ... ]
     fullMagList = raw.slice(1).map(r => ({
         code: r[0],
         visite: (r[1] === true || r[1] === "TRUE"),
@@ -303,75 +216,27 @@ async function initMagasins() {
         cp: r[6],
         ville: r[7],
         lat: Number(r[11]),
-        lng: Number(r[12])
+        lng: Number(r[12]),
+        vol: Number(r[13]),     // ajoutés par Worker
+        km: r[14],
+        duree: r[15]
     }));
 
 
-    /***********************
-     * Chargement des types dynamiques
-     ***********************/
+    // Types dynamiques
     typeList = [...new Set(fullMagList.map(m => m.type).filter(t => t && t.trim() !== ""))];
-
     const sel = document.getElementById("filterType");
+
     sel.innerHTML = `<option value="all">Tous les types</option>`;
+    typeList.sort().forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
 
-    typeList.sort().forEach(t => {
-        sel.innerHTML += `<option value="${t}">${t}</option>`;
-    });
-
-    /***********************
-     * Affiche tableau une seule fois
-     ***********************/
     renderTable();
 }
 
 
-/***************************************************
- * PARTIE 3 — GPS + UPDATE DISTANCES SANS REFRESH
- ***************************************************/
-
 
 /***************************************************
- * MISE À JOUR DES DISTANCES (VOL + ORS)
- * ⚡ Sans recharger le tableau
- ***************************************************/
-async function updateDistancesOnly() {
-
-    if (!gpsReady) return;
-
-    // Pour chaque magasin → MAJ 3 cellules
-    fullMagList.forEach(async m => {
-
-        /***************
-         * 1️⃣ MAJ VOL D’OISEAU
-         ***************/
-        const vol = haversine(window.userLat, window.userLng, m.lat, m.lng);
-
-        const volCell = document.querySelector(`.volCell[data-code="${m.code}"]`);
-        if (volCell) volCell.innerText = vol.toFixed(1) + " km";
-
-
-        /***************
-         * 2️⃣ MAJ ROUTE ORS (KM + TEMPS)
-         ***************/
-        getRouteDistance(window.userLat, window.userLng, m.lat, m.lng)
-        .then(info => {
-            if (!info) return;
-
-            const kmCell = document.querySelector(`.kmCell[data-code="${m.code}"]`);
-            const timeCell = document.querySelector(`.timeCell[data-code="${m.code}"]`);
-
-            if (kmCell) kmCell.innerText = info.km;
-            if (timeCell) timeCell.innerText = info.duree;
-        });
-
-    });
-}
-
-
-
-/***************************************************
- * GPS LIVE — déclenche MAJ distances + tri distance
+ * GPS — lance init dès qu'on l'a
  ***************************************************/
 navigator.geolocation.watchPosition(
     pos => {
@@ -379,25 +244,11 @@ navigator.geolocation.watchPosition(
         window.userLng = pos.coords.longitude;
         gpsReady = true;
 
-        // À la première localisation → tri automatique
-        if (sortCol === "vol") renderTable();
-
-        // Puis MAJ distances live
-        updateDistancesOnly();
+        initMagasins();    // déclenche rafraîchissement tri serveur
     },
     err => console.warn("GPS refusé:", err),
     { enableHighAccuracy: true }
 );
-
-
-
-/***************************************************
- * REFRESH AUTOMATIQUE TOUTES LES 30 SECONDES
- * ✔ Sans recharger le tableau
- ***************************************************/
-setInterval(() => {
-    if (gpsReady) updateDistancesOnly();
-}, 30000);
 
 
 
@@ -411,12 +262,3 @@ function clearCache() {
     addressCache = {};
     alert("Cache vidé ✔");
 }
-
-
-
-/***************************************************
- * START — CHARGEMENT INITIAL
- ***************************************************/
-initMagasins();
-
-
