@@ -21,6 +21,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     </button>
 </header>
 
+<!-- BARRE OUTILS -->
 <div class="toolbar">
 
     <input id="search" type="text" placeholder="Rechercher…" oninput="renderList()">
@@ -38,9 +39,15 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     <button class="btn-primary" onclick="goAdd()">
         <i class="fa-solid fa-plus"></i> Ajouter
     </button>
+
+    <button class="btn-primary" onclick="location.reload()">
+        <i class="fa-solid fa-broom"></i> Vider cache
+    </button>
+
 </div>
 
-<div id="list"></div>
+<!-- LISTE MAGASINS -->
+<div id="list" class="magasins-list"></div>
 
 <script src="auth.js"></script>
 <script src="app.js"></script>
