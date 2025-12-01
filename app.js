@@ -12,10 +12,7 @@ const APPS_SCRIPT_URL =
  ***********************************************************/
 async function loadMagasins() {
   try {
-
-    // ⭐⭐ IMPORTANT : action=get ajouté ⭐⭐
     const url = `${APPS_SCRIPT_URL}?action=get&origin=${encodeURIComponent(ALLOWED_ORIGIN)}`;
-
     const res = await fetch(url);
     const json = await res.json();
 
@@ -24,7 +21,12 @@ async function loadMagasins() {
       return;
     }
 
-    window.magasins = json.data.slice(1);
+    // ⭐ ON GARDE AUSSI L'INDEX D'ORIGINE
+    window.magasins = json.data.slice(1).map((row, idx) => ({
+      rowIndex: idx,   // index réel de la ligne dans Sheets (0-based)
+      data: row
+    }));
+
     initFilters();
     renderList();
 
@@ -35,20 +37,24 @@ async function loadMagasins() {
 }
 
 /***********************************************************
- * UPDATE VISITÉ
+ * UPDATE VISITÉ – 100% FIABLE
  ***********************************************************/
-async function toggleVisite(index, checked) {
+async function toggleVisite(realIndex, checked) {
 
-  const row = window.magasins[index];
+  // On récupère l'objet magasin
+  const mg = window.magasins[realIndex];
 
-  row[1] = checked; // colonne "fait"
+  // On modifie la colonne "fait"
+  mg.data[1] = checked;
+
+  console.log("UPDATE → RowIndex =", mg.rowIndex, "Code =", mg.data[0]);
 
   await fetch(APPS_SCRIPT_URL, {
     method: "POST",
     body: JSON.stringify({
       action: "update",
-      index: index,       // ❗ EXACT — plus de +1
-      row,
+      index: mg.rowIndex,   // ⭐ EXACT, Apps Script fera +2
+      row: mg.data,
       origin: ALLOWED_ORIGIN
     })
   });
@@ -59,24 +65,27 @@ async function toggleVisite(index, checked) {
 /***********************************************************
  * SUPPRESSION
  ***********************************************************/
-async function deleteMagasin(index) {
+async function deleteMagasin(realIndex) {
+
+  const mg = window.magasins[realIndex];
+
   if (!confirm("Supprimer ce magasin ?")) return;
 
   await fetch(APPS_SCRIPT_URL, {
     method: "POST",
     body: JSON.stringify({
       action: "delete",
-      index: index,     // ⭐ AppsScript fera +2
+      index: mg.rowIndex,
       origin: ALLOWED_ORIGIN
     })
   });
 
-  window.magasins.splice(index, 1);
+  window.magasins.splice(realIndex, 1);
   renderList();
 }
 
 /***********************************************************
- * ROUTE HERE
+ * API ROUTE HERE
  ***********************************************************/
 async function getRoute(lat1, lng1, lat2, lng2) {
   if (!lat2 || !lng2) return null;
@@ -89,6 +98,7 @@ async function getRoute(lat1, lng1, lat2, lng2) {
 
   const res = await fetch(url);
   const json = await res.json();
+
   if (!json.routes) return null;
 
   const s = json.routes[0].sections[0].summary;
@@ -100,7 +110,7 @@ async function getRoute(lat1, lng1, lat2, lng2) {
 }
 
 /***********************************************************
- * LIEN WAZE
+ * WAZE
  ***********************************************************/
 function wazeLink(lat, lng) {
   return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
@@ -110,7 +120,7 @@ function wazeLink(lat, lng) {
  * FILTRES
  ***********************************************************/
 function initFilters() {
-  const types = [...new Set(window.magasins.map(m => m[3]).filter(Boolean))];
+  const types = [...new Set(window.magasins.map(m => m.data[3]).filter(Boolean))];
   const sel = document.getElementById("filterType");
 
   sel.innerHTML = `<option value="all">Tous les types</option>`;
@@ -124,16 +134,15 @@ function applyFilters(list) {
 
   if (txt)
     list = list.filter(m =>
-      (m[2] || "").toLowerCase().includes(txt) ||
-      (m[5] || "").toLowerCase().includes(txt) ||
-      (m[7] || "").toLowerCase().includes(txt)
+      (m.data[2] || "").toLowerCase().includes(txt) ||
+      (m.data[5] || "").toLowerCase().includes(txt) ||
+      (m.data[7] || "").toLowerCase().includes(txt)
     );
 
-  if (fVisite === "visite") list = list.filter(m => m[1] === true);
-  if (fVisite === "nonvisite") list = list.filter(m => m[1] === false);
-
+  if (fVisite === "visite") list = list.filter(m => m.data[1] === true);
+  if (fVisite === "nonvisite") list = list.filter(m => m.data[1] === false);
   if (fType !== "all")
-    list = list.filter(m => m[3] === fType);
+    list = list.filter(m => m.data[3] === fType);
 
   return list;
 }
@@ -148,22 +157,19 @@ async function renderList() {
 
   navigator.geolocation.getCurrentPosition(async pos => {
 
-    const latUser = pos.coords.latitude;
-    const lngUser = pos.coords.longitude;
-
     container.innerHTML = "";
-
     const filtered = applyFilters([...window.magasins]);
 
-    for (const m of filtered) {
+    for (const mg of filtered) {
 
-      const index = window.magasins.indexOf(m);
+      const index = window.magasins.indexOf(mg);
+      const m = mg.data;
 
       const lat = m[11];
       const lng = m[12];
 
       let route = null;
-      if (lat && lng) route = await getRoute(latUser, lngUser, lat, lng);
+      if (lat && lng) route = await getRoute(pos.coords.latitude, pos.coords.longitude, lat, lng);
 
       const card = document.createElement("div");
       card.className = "magasin-card";
@@ -181,20 +187,13 @@ async function renderList() {
 
         <p class="adresse">${m[5]} ${m[6]} ${m[7]}</p>
 
-        ${route ?
-          `<p class="distance">📍 ${route.km} km | ⏱ ${route.minutes} min</p>` :
+        ${route ? `<p class="distance">📍 ${route.km} km | ⏱ ${route.minutes} min</p>` :
           `<p class="distance">📍 Distance inconnue</p>`}
 
         <div class="actions">
           <a href="${wazeLink(lat, lng)}" target="_blank" class="btn-waze">Waze</a>
-
-          <button class="btn-edit" onclick="goEdit('${m[0]}')">
-            Modifier
-          </button>
-
-          <button class="btn-delete" onclick="deleteMagasin(${index})">
-            Supprimer
-          </button>
+          <button class="btn-edit" onclick="goEdit('${m[0]}')">Modifier</button>
+          <button class="btn-delete" onclick="deleteMagasin(${index})">Supprimer</button>
         </div>
       `;
 
