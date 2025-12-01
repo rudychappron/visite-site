@@ -5,7 +5,7 @@ const HERE_API_KEY = "5TuJy6GHPhdQDvXGdFa8Hq984DX0NsSGvl3dRZjx0uo";
 const ALLOWED_ORIGIN = "https://rudychappron.github.io";
 
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwSHdLecIBM3RcVFyzQpm8Xrj2aKiyK-seP6upTjY0Wf-CWklBDdBr9x5DlbVx4znafGQ/exec";
+  "https://script.google.com/macros/s/AKfycbxamWQ5gx9ofSAwYMttyOjsju_XSdDgHdTBFtksLkXPH50WPmqp0AYHZAIq0o_KR4ZMyQ/exec";
 
 /***********************************************************
  * CHARGEMENT MAGASINS
