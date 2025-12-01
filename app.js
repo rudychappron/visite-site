@@ -7,6 +7,8 @@ window.userLat = null;
 window.userLng = null;
 
 let gpsReady = false;
+let gpsInitDone = false;  // ⬅️ empêche 40 appels
+
 let sortCol = null;
 let sortAsc = true;
 
@@ -43,11 +45,9 @@ async function normalizeAddress(a, cp, v) {
 
 
 /***************************************************
- * GET MAGASINS — VERSION OSRM (tri serveur)
+ * GET MAGASINS — Version OSRM
  ***************************************************/
 async function getMagasins() {
-    if (!gpsReady) return [];
-
     try {
         const res = await fetch(`${API}/get?lat=${window.userLat}&lng=${window.userLng}`);
         const json = await res.json();
@@ -71,9 +71,8 @@ async function toggleVisite(code, el) {
 }
 
 
-
 /***************************************************
- * TRI LOCAL — uniquement sur colonnes simples
+ * TRI
  ***************************************************/
 function sortBy(col) {
     if (sortCol === col) sortAsc = !sortAsc;
@@ -84,14 +83,14 @@ function sortBy(col) {
 
 
 /***************************************************
- * RECHERCHE ET FILTRES
+ * RECHERCHE + FILTRES
  ***************************************************/
 function onSearchChange() { renderTable(); }
 function onFilterChange() { renderTable(); }
 
 
 /***************************************************
- * RENDER TABLE — VERSION OSRM
+ * RENDER TABLE
  ***************************************************/
 async function renderTable() {
 
@@ -102,7 +101,6 @@ async function renderTable() {
     const fVisite = document.getElementById("filterVisite").value;
     const fType = document.getElementById("filterType").value;
 
-    // Liste préparée par le WORKER (tri GPS + OSRM 20 premiers)
     let list = fullMagList.map(r => ({
         code: r.code,
         visite: r.visite,
@@ -113,15 +111,13 @@ async function renderTable() {
         ville: r.ville,
         lat: r.lat,
         lng: r.lng,
-        vol: r.vol,        // distance vol d’oiseau (serveur)
-        km: r.km,          // distance route OSRM (serveur)
-        duree: r.duree     // temps route OSRM (serveur)
+        vol: r.vol,
+        km: r.km,
+        duree: r.duree
     }));
 
 
-    /***********************
-     * 1️⃣ RECHERCHE
-     ***********************/
+    /******** Recherche ********/
     list = list.filter(m =>
         m.code.toString().includes(search) ||
         m.nom.toLowerCase().includes(search) ||
@@ -129,33 +125,21 @@ async function renderTable() {
         m.ville.toLowerCase().includes(search)
     );
 
-
-    /***********************
-     * 2️⃣ FILTRE VISITE
-     ***********************/
+    /******** Filtre visite ********/
     if (fVisite === "visite") list = list.filter(m => m.visite);
     if (fVisite === "nonvisite") list = list.filter(m => !m.visite);
 
-
-    /***********************
-     * 3️⃣ FILTRE TYPE
-     ***********************/
+    /******** Filtre type ********/
     if (fType !== "all") list = list.filter(m => m.type === fType);
 
-
-    /***********************
-     * 4️⃣ TRI LOCAL (optionnel)
-     ***********************/
+    /******** TRI LOCAL ********/
     if (sortCol === "code") list.sort((a,b)=> sortAsc ? a.code - b.code : b.code - a.code);
     if (sortCol === "nom") list.sort((a,b)=> sortAsc ? a.nom.localeCompare(b.nom) : b.nom.localeCompare(a.nom));
     if (sortCol === "type") list.sort((a,b)=> sortAsc ? a.type.localeCompare(b.type) : b.type.localeCompare(a.type));
     if (sortCol === "visite") list.sort((a,b)=> sortAsc ? a.visite - b.visite : b.visite - a.visite);
-    // VOL, KM, TEMPS NE SONT PLUS TRIÉS ICI (déjà triés côté serveur)
 
 
-    /***********************
-     * 5️⃣ CREATION DES LIGNES
-     ***********************/
+    /******** Affichage ********/
     for (const m of list) {
 
         const fullAdr = await normalizeAddress(m.adresse, m.cp, m.ville);
@@ -166,10 +150,8 @@ async function renderTable() {
         tr.innerHTML = `
             <td>${m.code}</td>
 
-            <td>
-                <input type="checkbox" ${m.visite ? "checked" : ""}
-                       onchange="toggleVisite('${m.code}', this)">
-            </td>
+            <td><input type="checkbox" ${m.visite ? "checked" : ""} 
+                       onchange="toggleVisite('${m.code}', this)"></td>
 
             <td>${m.nom}</td>
             <td>${m.type}</td>
@@ -185,9 +167,7 @@ async function renderTable() {
             <td>${m.km || "-"}</td>
             <td>${m.duree || "-"}</td>
 
-            <td>
-                <button onclick="editMagasin('${m.code}')">✏️</button>
-            </td>
+            <td><button onclick="editMagasin('${m.code}')">✏️</button></td>
         `;
 
         tbody.appendChild(tr);
@@ -195,18 +175,13 @@ async function renderTable() {
 }
 
 
-
 /***************************************************
- * INITIALISATION — GET + TYPES
+ * INIT
  ***************************************************/
 async function initMagasins() {
 
-    // Attendre GPS
-    if (!gpsReady) return;
-
     const raw = await getMagasins();
 
-    // raw = [ header, row1, row2, ... ]
     fullMagList = raw.slice(1).map(r => ({
         code: r[0],
         visite: (r[1] === true || r[1] === "TRUE"),
@@ -217,16 +192,14 @@ async function initMagasins() {
         ville: r[7],
         lat: Number(r[11]),
         lng: Number(r[12]),
-        vol: Number(r[13]),     // ajoutés par Worker
+        vol: Number(r[13]),
         km: r[14],
         duree: r[15]
     }));
 
-
-    // Types dynamiques
-    typeList = [...new Set(fullMagList.map(m => m.type).filter(t => t && t.trim() !== ""))];
+    /**** Types dynamiques ****/
+    typeList = [...new Set(fullMagList.map(m => m.type).filter(Boolean))];
     const sel = document.getElementById("filterType");
-
     sel.innerHTML = `<option value="all">Tous les types</option>`;
     typeList.sort().forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
 
@@ -234,9 +207,8 @@ async function initMagasins() {
 }
 
 
-
 /***************************************************
- * GPS — lance init dès qu'on l'a
+ * GPS — ne recharge qu'une seule fois !
  ***************************************************/
 navigator.geolocation.watchPosition(
     pos => {
@@ -244,12 +216,14 @@ navigator.geolocation.watchPosition(
         window.userLng = pos.coords.longitude;
         gpsReady = true;
 
-        initMagasins();    // déclenche rafraîchissement tri serveur
+        if (!gpsInitDone) {
+            gpsInitDone = true;     // ⬅️ empêche appels multiples
+            initMagasins();         // ⬅️ appelé UNE SEULE FOIS
+        }
     },
     err => console.warn("GPS refusé:", err),
     { enableHighAccuracy: true }
 );
-
 
 
 /***************************************************
@@ -257,8 +231,5 @@ navigator.geolocation.watchPosition(
  ***************************************************/
 function editMagasin(code) { location.href = `edit-magasin.html?code=${code}`; }
 function goAdd() { location.href = "add-magasin.html"; }
+function clearCache() { addressCache = {}; alert("Cache vidé ✔"); }
 
-function clearCache() {
-    addressCache = {};
-    alert("Cache vidé ✔");
-}
