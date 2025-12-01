@@ -38,15 +38,16 @@ async function loadMagasins() {
  * UPDATE VISITÉ
  ***********************************************************/
 async function toggleVisite(index, checked) {
+
   const row = window.magasins[index];
 
-  row[1] = checked;
+  row[1] = checked; // colonne "fait"
 
   await fetch(APPS_SCRIPT_URL, {
     method: "POST",
     body: JSON.stringify({
       action: "update",
-      index: index,       // ⭐ index 0-based, AppsScript fera +2
+      index: index,       // ❗ EXACT — plus de +1
       row,
       origin: ALLOWED_ORIGIN
     })
