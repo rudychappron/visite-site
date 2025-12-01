@@ -5,15 +5,15 @@ const HERE_API_KEY = "5TuJy6GHPhdQDvXGdFa8Hq984DX0NsSGvl3dRZjx0uo";
 const ALLOWED_ORIGIN = "https://rudychappron.github.io";
 
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbw55iouMkIi2DH8yuKWzY2RGjjKL2Z9PvA0N1bakqVWyH6AeVshrL3kYLQZnVJLVLVOMw/exec";
+  "https://script.google.com/macros/s/AKfycbwSHdLecIBM3RcVFyzQpm8Xrj2aKiyK-seP6upTjY0Wf-CWklBDdBr9x5DlbVx4znafGQ/exec";
 
 /***********************************************************
- * CHARGER LES MAGASINS
+ * CHARGER LES MAGASINS (GET)
  ***********************************************************/
 async function loadMagasins() {
   try {
     const url =
-      `${APPS_SCRIPT_URL}?action=get&origin=${encodeURIComponent(ALLOWED_ORIGIN)}`;
+      `${APPS_SCRIPT_URL}?origin=${encodeURIComponent(ALLOWED_ORIGIN)}`;
 
     const res = await fetch(url);
     const json = await res.json();
@@ -23,7 +23,7 @@ async function loadMagasins() {
       return;
     }
 
-    window.magasins = json.data.slice(1); // on retire l’en-tête
+    window.magasins = json.data.slice(1);
     initFilters();
     renderList();
 
@@ -66,46 +66,6 @@ function wazeLink(lat, lng) {
 }
 
 /***********************************************************
- * METTRE À JOUR "VISITÉ"
- ***********************************************************/
-async function toggleVisite(index, checked) {
-
-  // sécurité
-  if (!window.magasins[index]) return;
-
-  window.magasins[index][1] = checked;
-
-  await fetch(APPS_SCRIPT_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "update",
-      index: index + 1,
-      row: window.magasins[index]
-    }),
-  });
-
-  console.log("Visité mis à jour !");
-}
-
-/***********************************************************
- * SUPPRESSION
- ***********************************************************/
-async function deleteMagasin(index) {
-  if (!confirm("Supprimer ce magasin ?")) return;
-
-  await fetch(APPS_SCRIPT_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "delete",
-      index: index + 1
-    }),
-  });
-
-  window.magasins.splice(index, 1);
-  renderList();
-}
-
-/***********************************************************
  * FILTRES
  ***********************************************************/
 function initFilters() {
@@ -125,7 +85,6 @@ function applyFilters(list) {
   const fVisite = document.getElementById("filterVisite").value;
   const fType = document.getElementById("filterType").value;
 
-  // Recherche texte
   if (txt !== "") {
     list = list.filter(m =>
       (m[2] || "").toLowerCase().includes(txt) ||
@@ -134,11 +93,9 @@ function applyFilters(list) {
     );
   }
 
-  // Filtre Visité
   if (fVisite === "visite") list = list.filter(m => m[1] === true);
   if (fVisite === "nonvisite") list = list.filter(m => m[1] === false);
 
-  // Filtre Type
   if (fType !== "all") {
     list = list.filter(m => (m[3] || "") === fType);
   }
@@ -164,9 +121,9 @@ async function renderList() {
 
     const filtered = applyFilters([...window.magasins]);
 
-    filtered.forEach(async (m) => {
+    for (const m of filtered) {
 
-      const index = window.magasins.indexOf(m); // correct
+      const index = window.magasins.indexOf(m);
 
       const lat = m[11];
       const lng = m[12];
@@ -180,12 +137,6 @@ async function renderList() {
       card.innerHTML = `
         <div class="mag-header">
           <h3>${m[2] || "Nom manquant"}</h3>
-
-          <label class="visit-toggle">
-            <input type="checkbox" ${m[1] ? "checked" : ""}
-                   onchange="toggleVisite(${index}, this.checked)">
-            <span>Visité</span>
-          </label>
         </div>
 
         <p class="adresse">${m[5] || ""} ${m[6] || ""} ${m[7] || ""}</p>
@@ -197,13 +148,11 @@ async function renderList() {
 
         <div class="actions">
           <a href="${wazeLink(lat, lng)}" target="_blank" class="btn-waze">Waze</a>
-          <button class="btn-edit" onclick="goEdit('${m[0]}')">Modifier</button>
-          <button class="btn-delete" onclick="deleteMagasin(${index})">Supprimer</button>
         </div>
       `;
 
       container.appendChild(card);
-    });
+    }
 
   });
 }
