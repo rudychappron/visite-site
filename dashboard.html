@@ -24,12 +24,27 @@
 <!-- BARRE OUTILS -->
 <div class="toolbar">
 
-    <input id="search" type="text" placeholder="Rechercher…" onkeyup="searchMagasins()">
+    <!-- 🔍 RECHERCHE -->
+    <input id="search" type="text" placeholder="Rechercher…" onkeyup="onSearchChange()">
 
+    <!-- 🔽 FILTRE VISITE -->
+    <select id="filterVisite" onchange="onFilterChange()">
+        <option value="all">Tous</option>
+        <option value="visite">Visités</option>
+        <option value="nonvisite">Non visités</option>
+    </select>
+
+    <!-- 🔽 FILTRE TYPE — DYNAMIQUE -->
+    <select id="filterType" onchange="onFilterChange()">
+        <option value="all">Tous les types</option>
+    </select>
+
+    <!-- ➕ AJOUTER -->
     <button class="btn-primary" onclick="goAdd()">
         <i class="fa-solid fa-plus"></i> Ajouter
     </button>
 
+    <!-- 🧹 VIDER CACHE -->
     <button class="btn-primary" onclick="clearCache()">
         <i class="fa-solid fa-broom"></i> Vider cache
     </button>
@@ -54,11 +69,11 @@
     <tbody></tbody>
 </table>
 
-<!-- 🔐 Authentification -->
+<!-- Auth -->
 <script src="auth.js?v=1"></script>
 
-<!-- 🧠 Application globale -->
-<script src="app.js?v=2"></script>
+<!-- App -->
+<script src="app.js?v=200"></script>
 
 </body>
 </html>
