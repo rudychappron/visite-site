@@ -6,9 +6,7 @@
 <title>Ajouter un magasin — Outil Rudy</title>
 
 <link rel="stylesheet" href="styles.css">
-
-<!-- Icônes FontAwesome -->
-<link rel="stylesheet"
+<link rel="stylesheet" 
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
@@ -22,38 +20,34 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
 </header>
 
 <div class="form-container">
-    <div class="form">
-        <label>Code magasin</label>
-        <input id="code" placeholder="Ex : 12345">
+<div class="form">
 
-        <label>Nom du magasin</label>
-        <input id="nom" placeholder="Ex : BV Limonest">
+    <label>Code magasin</label>
+    <input id="code">
 
-        <label>Type</label>
-        <input id="type" placeholder="Ex : BV / TOTAL / AUTRE">
+    <label>Nom du magasin</label>
+    <input id="nom">
 
-        <label>Adresse</label>
-        <input id="adresse" placeholder="Ex : 8 route du Lac">
+    <label>Type</label>
+    <input id="type">
 
-        <label>Code postal</label>
-        <input id="cp" placeholder="Ex : 69000">
+    <label>Adresse</label>
+    <input id="adresse">
 
-        <label>Ville</label>
-        <input id="ville" placeholder="Ex : Lyon">
+    <label>Code postal</label>
+    <input id="cp">
 
-        <button class="btn-primary" onclick="addMagasin()">
-            <i class="fa-solid fa-check"></i> Enregistrer
-        </button>
-    </div>
+    <label>Ville</label>
+    <input id="ville">
+
+    <button class="btn-primary" onclick="addMagasin()">
+        Enregistrer
+    </button>
+
+</div>
 </div>
 
-<!-- 1️⃣ Authentification -->
 <script src="auth.js"></script>
-
-<!-- 2️⃣ 🔐 Secure API — fichier PRIVÉ -->
-<script src="https://raw.githubusercontent.com/rudychappron/VISITE-/refs/heads/main/app-secure.js?token=GHSAT0AAAAAADQJ4TL54V57ZVNNMWB2LGFW2JMGLTA"></script>
-
-<!-- 3️⃣ ⭐ Application — fichier PUBLIC -->
 <script src="app.js"></script>
 
 </body>
