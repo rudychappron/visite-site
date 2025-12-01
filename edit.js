@@ -2,10 +2,10 @@
  * CONFIG
  ***********************************************************/
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbw55iouMkIi2DH8yuKWzY2RGjjKL2Z9PvA0N1bakqVWyH6AeVshrL3kYLQZnVJLVLVOMw/exec";
+  "https://script.google.com/macros/s/AKfycbwSHdLecIBM3RcVFyzQpm8Xrj2aKiyK-seP6upTjY0Wf-CWklBDdBr9x5DlbVx4znafGQ/exec";
 
 /***********************************************************
- * CHARGER LES DONNÉES DU MAGASIN
+ * CHARGER LE MAGASIN
  ***********************************************************/
 async function loadMagasin() {
 
@@ -37,10 +37,10 @@ async function loadMagasin() {
     return;
   }
 
-  // Index réel dans Sheets
+  // INDEX GLOBAL (dans le tableau complet)
   window.editIndex = rows.indexOf(row);
 
-  // Pré-remplissage du formulaire
+  // Pré-remplir le formulaire
   document.getElementById("code").value = row[0];
   document.getElementById("nom").value = row[2] || "";
   document.getElementById("type").value = row[3] || "";
@@ -50,38 +50,44 @@ async function loadMagasin() {
 }
 
 /***********************************************************
- * SAUVEGARDE DES MODIFICATIONS
+ * SAUVEGARDE
  ***********************************************************/
 async function saveEdit() {
 
   const row = [];
 
-  row[0] = document.getElementById("code").value;          // Code magasin
-  row[1] = false;                                          // Visité (pas modifié ici)
-  row[2] = document.getElementById("nom").value;
-  row[3] = document.getElementById("type").value;
-  row[4] = "";                                             // Nom complet (optionnel)
+  row[0] = document.getElementById("code").value;
+  row[1] = false; // Visité
+  row[2] = document.getElementById("nom").value;      // NOM COMPLET
+  row[3] = document.getElementById("type").value;     // TYPE
+  row[4] = "";                                        // NOM (court)
   row[5] = document.getElementById("adresse").value;
   row[6] = document.getElementById("cp").value;
   row[7] = document.getElementById("ville").value;
 
-  // Colonnes fixes pour rester compatibles avec le tableau Sheets
-  row[8]  = ""; // Département
-  row[9]  = ""; // ID
-  row[10] = ""; // Mot de passe
-  row[11] = ""; // Latitude
-  row[12] = ""; // Longitude
+  // Colonnes fixes
+  row[8]  = "";
+  row[9]  = "";
+  row[10] = "";
+  row[11] = "";
+  row[12] = "";
+  row[13] = "";
+  row[14] = "";
+
+  const body = {
+    action: "update",
+    index: window.editIndex,
+    row: row,
+    origin: "https://rudychappron.github.io"
+  };
 
   const res = await fetch(APPS_SCRIPT_URL, {
     method: "POST",
-    body: JSON.stringify({
-      action: "update",
-      index: window.editIndex,
-      row
-    }),
+    body: JSON.stringify(body)
   });
 
   const json = await res.json();
+
   if (!json.ok) {
     alert("Erreur API lors de la sauvegarde !");
     return;
@@ -100,6 +106,6 @@ function logout() {
 }
 
 /***********************************************************
- * AUTO-LANCEMENT AU CHARGEMENT DE LA PAGE
+ * AUTO
  ***********************************************************/
 loadMagasin();
