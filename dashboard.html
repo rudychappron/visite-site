@@ -2,32 +2,31 @@
 <html lang="fr">
 
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Liste des magasins — Outil Rudy</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Magasins</title>
 
 <link rel="stylesheet" href="styles.css">
-
-<!-- Icônes FontAwesome -->
 <link rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 </head>
 
 <body>
 
 <header class="header">
-    <h1>Liste des magasins</h1>
+    <h1>🛒 Dashboard — Magasins</h1>
 
     <button class="logout-btn" onclick="logout()">
         <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
     </button>
 </header>
 
-<!-- BARRE OUTILS -->
+<!-- 🔎 BARRE D’OUTILS FUTURISTE -->
 <div class="toolbar">
 
-    <input id="search" type="text" placeholder="Rechercher…" oninput="renderList()" />
+    <input id="search" type="text" placeholder="🔎 Rechercher…"
+           oninput="renderList()">
 
     <select id="filterVisite" onchange="renderList()">
         <option value="all">Tous</option>
@@ -44,15 +43,14 @@
     </button>
 
     <button class="btn-primary" onclick="location.reload()">
-        <i class="fa-solid fa-broom"></i> Vider cache
+        <i class="fa-solid fa-rotate"></i> Actualiser
     </button>
 
 </div>
 
-<!-- LISTE MAGASINS -->
+<!-- LISTE DES MAGASINS -->
 <div id="list" class="magasins-list"></div>
 
-<!-- Scripts -->
 <script src="auth.js"></script>
 <script src="app.js"></script>
 
