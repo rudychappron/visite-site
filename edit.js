@@ -5,6 +5,26 @@ const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxamWQ5gx9ofSAwYMttyOjsju_XSdDgHdTBFtksLkXPH50WPmqp0AYHZAIq0o_KR4ZMyQ/exec";
 const ALLOWED_ORIGIN = "https://rudychappron.github.io";
 
+const HERE_API_KEY = "5TuJy6GHPhdQDvXGdFa8Hq984DX0NsSGvl3dRZjx0uo";
+
+/***********************************************************
+ * GÉOCODAGE HERE (ADRESSE → LAT / LNG)
+ ***********************************************************/
+async function geocode(adresse) {
+
+  const url = `https://geocode.search.hereapi.com/v1/geocode?q=${encodeURIComponent(adresse)}&apikey=${HERE_API_KEY}`;
+
+  const res = await fetch(url);
+  const json = await res.json();
+
+  if (!json.items || json.items.length === 0) return null;
+
+  return {
+    lat: json.items[0].position.lat,
+    lng: json.items[0].position.lng
+  };
+}
+
 /***********************************************************
  * CHARGER LE MAGASIN EN ÉDITION
  ***********************************************************/
@@ -19,7 +39,6 @@ async function loadMagasin() {
     return;
   }
 
-  // Charger toutes les lignes
   const res = await fetch(APPS_SCRIPT_URL + "?action=get&origin=" + ALLOWED_ORIGIN);
   const json = await res.json();
 
@@ -28,9 +47,7 @@ async function loadMagasin() {
     return;
   }
 
-  const rows = json.data.slice(1); // on enlève l'entête
-
-  // Trouver la ligne
+  const rows = json.data.slice(1); // enlève entête
   const idx = rows.findIndex(r => r[0] == code);
 
   if (idx === -1) {
@@ -39,13 +56,13 @@ async function loadMagasin() {
     return;
   }
 
-  // ⚡ ON STOCKE UN OBJET COMPATIBLE AVEC APP.JS
+  // Structure identique à App.js
   currentMag = {
-    rowIndex: idx,    // index réel dans Sheets (0-based)
-    data: rows[idx]   // tableau complet de la ligne
+    rowIndex: idx,   // index réel ligne (0 = ligne 2)
+    data: rows[idx]
   };
 
-  // Pré-remplissage du formulaire
+  // Remplir formulaire
   document.getElementById("code").value = currentMag.data[0];
   document.getElementById("nom").value = currentMag.data[2] || "";
   document.getElementById("type").value = currentMag.data[3] || "";
@@ -55,7 +72,7 @@ async function loadMagasin() {
 }
 
 /***********************************************************
- * SAUVEGARDE
+ * SAUVEGARDE + GÉOCODAGE
  ***********************************************************/
 async function saveEdit() {
 
@@ -64,7 +81,21 @@ async function saveEdit() {
     return;
   }
 
-  // Réécrire la ligne modifiée
+  // Construire adresse complète
+  const adrComplete =
+    `${document.getElementById("adresse").value} ` +
+    `${document.getElementById("cp").value} ` +
+    `${document.getElementById("ville").value}`;
+
+  // Géocodage (lat / lng)
+  const gps = await geocode(adrComplete);
+
+  if (gps) {
+    currentMag.data[11] = gps.lat;  // LATITUDE
+    currentMag.data[12] = gps.lng;  // LONGITUDE
+  }
+
+  // Mise à jour des autres colonnes
   currentMag.data[0] = document.getElementById("code").value;
   currentMag.data[2] = document.getElementById("nom").value;
   currentMag.data[3] = document.getElementById("type").value;
@@ -76,11 +107,12 @@ async function saveEdit() {
   console.log("INDEX :", currentMag.rowIndex);
   console.log("ROW :", currentMag.data);
 
+  // Envoi API
   const res = await fetch(APPS_SCRIPT_URL + "?origin=" + ALLOWED_ORIGIN, {
     method: "POST",
     body: JSON.stringify({
       action: "update",
-      index: currentMag.rowIndex,   // ⭐ EXACTEMENT COMME toggleVisite
+      index: currentMag.rowIndex,
       row: currentMag.data
     })
   });
@@ -93,7 +125,7 @@ async function saveEdit() {
     return;
   }
 
-  alert("Magasin mis à jour !");
+  alert("Magasin sauvegardé !");
   location.href = "dashboard.html";
 }
 
