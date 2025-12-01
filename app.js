@@ -6,7 +6,7 @@ const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbzcUr84EJSS0ngVtLT2d5NFSIp24hCJNDgAShacHvClGUW8Kek4ZtXVlJGekIy2shSUIw/exec";
 
 /***********************************************************
- * LECTURE FEUILLE GOOGLE SHEETS
+ * CHARGEMENT DES MAGASINS
  ***********************************************************/
 async function loadMagasins() {
   try {
@@ -27,6 +27,7 @@ async function loadMagasins() {
     window.header = json.data[0];
     window.magasins = json.data.slice(1);
 
+    initFilters(); // ← prépare les filtres
     renderList();
   } catch (e) {
     console.error(e);
@@ -68,7 +69,7 @@ function wazeLink(lat, lng) {
  * METTRE À JOUR "VISITÉ"
  ***********************************************************/
 async function toggleVisite(index, value) {
-  window.magasins[index][1] = value; // col "fait"
+  window.magasins[index][1] = value;
 
   await fetch(APPS_SCRIPT_URL, {
     method: "POST",
@@ -101,6 +102,46 @@ async function deleteMagasin(index) {
 }
 
 /***********************************************************
+ * FILTRES — RECHERCHE / TYPE / VISITÉ
+ ***********************************************************/
+function initFilters() {
+  const types = [...new Set(window.magasins.map(m => m[3]).filter(Boolean))];
+
+  const select = document.getElementById("filterType");
+  select.innerHTML = `<option value="all">Tous les types</option>`;
+
+  types.forEach(t => {
+    select.innerHTML += `<option value="${t}">${t}</option>`;
+  });
+}
+
+function applyFilters(list) {
+  const txt = document.getElementById("search").value.toLowerCase();
+  const filtreVisite = document.getElementById("filterVisite").value;
+  const filtreType = document.getElementById("filterType").value;
+
+  // 🔍 Recherche
+  if (txt !== "") {
+    list = list.filter(m =>
+      (m[2] || "").toLowerCase().includes(txt) ||
+      (m[5] || "").toLowerCase().includes(txt) ||
+      (m[7] || "").toLowerCase().includes(txt)
+    );
+  }
+
+  // ✔ Visité
+  if (filtreVisite === "visite") list = list.filter(m => m[1] === true);
+  if (filtreVisite === "nonvisite") list = list.filter(m => m[1] === false);
+
+  // 🏷 Type magasin
+  if (filtreType !== "all") {
+    list = list.filter(m => (m[3] || "") === filtreType);
+  }
+
+  return list;
+}
+
+/***********************************************************
  * AFFICHAGE VERSION CARTES
  ***********************************************************/
 async function renderList() {
@@ -115,8 +156,11 @@ async function renderList() {
 
     container.innerHTML = "";
 
-    for (let i = 0; i < window.magasins.length; i++) {
-      const m = window.magasins[i];
+    // 🔥 Application des filtres
+    let filtered = applyFilters([...window.magasins]);
+
+    for (let i = 0; i < filtered.length; i++) {
+      const m = filtered[i];
       const lat = m[11];
       const lng = m[12];
 
@@ -132,7 +176,7 @@ async function renderList() {
 
           <label class="visit-toggle">
             <input type="checkbox" ${m[1] ? "checked" : ""} 
-                   onchange="toggleVisite(${i}, this.checked)">
+                   onchange="toggleVisite(${window.magasins.indexOf(m)}, this.checked)">
             <span>Visité</span>
           </label>
         </div>
@@ -154,7 +198,7 @@ async function renderList() {
             ✏️ Modifier
           </button>
 
-          <button class="btn-delete" onclick="deleteMagasin(${i})">
+          <button class="btn-delete" onclick="deleteMagasin(${window.magasins.indexOf(m)})">
             🗑️ Supprimer
           </button>
         </div>
