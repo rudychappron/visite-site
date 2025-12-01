@@ -1,89 +1,234 @@
 /***********************************************************
- * CONFIG
+ * CONFIGURATION
  ***********************************************************/
-const SHEET = "Magasins";
-const ALLOWED = "https://rudychappron.github.io";
+const HERE_API_KEY = "5TuJy6GHPhdQDvXGdFa8Hq984DX0NsSGvl3dRZjx0uo";
+const APPS_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbzcUr84EJSS0ngVtLT2d5NFSIp24hCJNDgAShacHvClGUW8Kek4ZtXVlJGekIy2shSUIw/exec";
 
 /***********************************************************
- * OPTIONS (CORS)
+ * CHARGEMENT DES MAGASINS
  ***********************************************************/
-function doOptions() {
-  return ContentService
-    .createTextOutput("")
-    .setMimeType(ContentService.MimeType.TEXT)
-    .setHeaders({
-      "Access-Control-Allow-Origin": ALLOWED,
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type"
-    });
+async function loadMagasins() {
+  try {
+    const url =
+      APPS_SCRIPT_URL +
+      "?origin=" +
+      encodeURIComponent("https://rudychappron.github.io");
+
+    const res = await fetch(url);
+    const json = await res.json();
+
+    if (!json.ok) {
+      alert("Erreur API : " + (json.error || "inconnue"));
+      return;
+    }
+
+    window.header = json.data[0];
+    window.magasins = json.data.slice(1);
+
+    initFilters();
+    renderList();
+
+  } catch (e) {
+    console.error(e);
+    alert("Erreur réseau : impossible de charger les magasins.");
+  }
 }
 
 /***********************************************************
- * DOGET — compatibilité OPTIONS + GET normal
+ * API HERE — ROUTE / TEMPS
  ***********************************************************/
-function doGet(e) {
+async function getRoute(lat1, lng1, lat2, lng2) {
+  if (!lat2 || !lng2) return null;
 
-  // OPTIONS fallback (important)
-  if (e && e.parameter && e.parameter.options === "true") {
-    return doOptions();
-  }
+  const url =
+    `https://router.hereapi.com/v8/routes?transportMode=car&origin=${lat1},${lng1}` +
+    `&destination=${lat2},${lng2}&return=summary&apikey=${HERE_API_KEY}`;
 
-  const origin = e?.parameter?.origin || "";
-  if (origin !== ALLOWED) {
-    return ContentService.createTextOutput("Forbidden");
-  }
+  const res = await fetch(url);
+  const json = await res.json();
 
-  // Lecture des données
-  const sheet = SpreadsheetApp.getActive().getSheetByName(SHEET);
-  const data = sheet.getDataRange().getValues();
+  if (!json.routes) return null;
 
-  return ContentService
-    .createTextOutput(JSON.stringify({ ok: true, data }))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders({
-      "Access-Control-Allow-Origin": ALLOWED
-    });
+  const s = json.routes[0].sections[0].summary;
+
+  return {
+    km: (s.length / 1000).toFixed(1),
+    minutes: Math.round(s.duration / 60)
+  };
 }
 
 /***********************************************************
- * DOPOST — Add / Update / Delete (FULL CORS)
+ * LIEN WAZE
  ***********************************************************/
-function doPost(e) {
-  const sheet = SpreadsheetApp.getActive().getSheetByName(SHEET);
-  const body = JSON.parse(e.postData.contents);
-  const action = body.action;
-
-  let result = {};
-
-  // 🔵 Mise à jour
-  if (action === "update") {
-    sheet.getRange(body.index + 1, 1, 1, body.row.length).setValues([body.row]);
-    result = { ok: true };
-  }
-
-  // 🔴 Suppression
-  else if (action === "delete") {
-    sheet.deleteRow(body.index + 1);
-    result = { ok: true };
-  }
-
-  // 🟢 Ajout
-  else if (action === "add") {
-    sheet.appendRow(body.row);
-    result = { ok: true };
-  }
-
-  // ❌ Action inconnue
-  else {
-    result = { ok: false, error: "Action inconnue" };
-  }
-
-  return ContentService
-    .createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders({
-      "Access-Control-Allow-Origin": ALLOWED,
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type"
-    });
+function wazeLink(lat, lng) {
+  return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 }
+
+/***********************************************************
+ * MISE À JOUR DU CHAMP "VISITÉ"
+ ***********************************************************/
+async function toggleVisite(index, value) {
+  window.magasins[index][1] = value;
+
+  await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "update",
+      index: index + 1,
+      row: window.magasins[index]
+    }),
+  });
+
+  console.log("Visité mis à jour !");
+}
+
+/***********************************************************
+ * SUPPRESSION MAGASIN
+ ***********************************************************/
+async function deleteMagasin(index) {
+  if (!confirm("Supprimer ce magasin ?")) return;
+
+  await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "delete",
+      index: index + 1
+    }),
+  });
+
+  window.magasins.splice(index, 1);
+  renderList();
+}
+
+/***********************************************************
+ * FILTRES
+ ***********************************************************/
+function initFilters() {
+  const types = [...new Set(window.magasins.map(m => m[3]).filter(Boolean))];
+
+  const select = document.getElementById("filterType");
+  select.innerHTML = `<option value="all">Tous les types</option>`;
+
+  types.forEach(t => {
+    select.innerHTML += `<option value="${t}">${t}</option>`;
+  });
+}
+
+function applyFilters(list) {
+  const txt = document.getElementById("search").value.toLowerCase();
+  const filtreVisite = document.getElementById("filterVisite").value;
+  const filtreType = document.getElementById("filterType").value;
+
+  // Recherche
+  if (txt !== "") {
+    list = list.filter(m =>
+      (m[2] || "").toLowerCase().includes(txt) ||
+      (m[5] || "").toLowerCase().includes(txt) ||
+      (m[7] || "").toLowerCase().includes(txt)
+    );
+  }
+
+  // Visité
+  if (filtreVisite === "visite") list = list.filter(m => m[1] === true);
+  if (filtreVisite === "nonvisite") list = list.filter(m => m[1] === false);
+
+  // Type
+  if (filtreType !== "all") {
+    list = list.filter(m => (m[3] || "") === filtreType);
+  }
+
+  return list;
+}
+
+/***********************************************************
+ * AFFICHAGE DES CARTES
+ ***********************************************************/
+async function renderList() {
+  const container = document.getElementById("list");
+  if (!container) return;
+
+  container.innerHTML = "Chargement…";
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const latUser = pos.coords.latitude;
+    const lngUser = pos.coords.longitude;
+
+    container.innerHTML = "";
+
+    let filtered = applyFilters([...window.magasins]);
+
+    for (let i = 0; i < filtered.length; i++) {
+      const m = filtered[i];
+      const lat = m[11];
+      const lng = m[12];
+
+      let route = null;
+      if (lat && lng) route = await getRoute(latUser, lngUser, lat, lng);
+
+      const div = document.createElement("div");
+      div.className = "magasin-card";
+
+      div.innerHTML = `
+        <div class="mag-header">
+          <h3>${m[2] || "Nom manquant"}</h3>
+
+          <label class="visit-toggle">
+            <input type="checkbox" ${m[1] ? "checked" : ""} 
+                   onchange="toggleVisite(${window.magasins.indexOf(m)}, this.checked)">
+            <span>Visité</span>
+          </label>
+        </div>
+
+        <p class="adresse">${m[5] || ""} ${m[6] || ""} ${m[7] || ""}</p>
+
+        ${
+          route
+            ? `<p class="distance">📍 ${route.km} km — ⏱ ${route.minutes} min</p>`
+            : `<p class="distance">📍 Distance non disponible</p>`
+        }
+
+        <div class="actions">
+          <a href="${wazeLink(lat, lng)}" target="_blank" class="btn-waze">
+            🚗 Waze
+          </a>
+
+          <button class="btn-edit" onclick="goEdit('${m[0]}')">
+            ✏️ Modifier
+          </button>
+
+          <button class="btn-delete" onclick="deleteMagasin(${window.magasins.indexOf(m)})">
+            🗑️ Supprimer
+          </button>
+        </div>
+      `;
+
+      container.appendChild(div);
+    }
+  });
+}
+
+/***********************************************************
+ * NAVIGATION
+ ***********************************************************/
+function goAdd() {
+  location.href = "add-magasin.html";
+}
+
+function goEdit(code) {
+  localStorage.setItem("editCode", code);
+  location.href = "edit-magasin.html";
+}
+
+/***********************************************************
+ * LOGOUT
+ ***********************************************************/
+function logout() {
+  localStorage.removeItem("session");
+  location.href = "index.html";
+}
+
+/***********************************************************
+ * LANCEMENT
+ ***********************************************************/
+loadMagasins();
