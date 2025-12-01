@@ -2,57 +2,48 @@
 <html lang="fr">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liste des magasins — Outil Rudy</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Liste des magasins — Outil Rudy</title>
 
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 </head>
 
 <body>
 
 <header class="header">
     <h1>Liste des magasins</h1>
-
     <button class="logout-btn" onclick="logout()">
         <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
     </button>
 </header>
 
-<!-- BARRE OUTILS -->
 <div class="toolbar">
 
-    <input id="search" type="text" placeholder="Rechercher…" onkeyup="onSearchChange()">
+    <input id="search" type="text" placeholder="Rechercher…" oninput="renderList()">
 
-    <select id="filterVisite" onchange="onFilterChange()">
+    <select id="filterVisite" onchange="renderList()">
         <option value="all">Tous</option>
         <option value="visite">Visités</option>
         <option value="nonvisite">Non visités</option>
     </select>
 
-    <select id="filterType" onchange="onFilterChange()">
+    <select id="filterType" onchange="renderList()">
         <option value="all">Tous les types</option>
     </select>
 
     <button class="btn-primary" onclick="goAdd()">
         <i class="fa-solid fa-plus"></i> Ajouter
     </button>
-
-    <button class="btn-primary" onclick="clearCache()">
-        <i class="fa-solid fa-broom"></i> Vider cache
-    </button>
-
 </div>
 
-<!-- LISTE MAGASINS (NOUVEAU FORMAT CARTES) -->
-<div id="list" class="magasins-list">
-    <!-- Rempli par app.js -->
-</div>
+<div id="list"></div>
 
-<script src="auth.js?v=1"></script>
-<script src="app.js?v=20001"></script>
+<script src="auth.js"></script>
+<script src="app.js"></script>
 
 </body>
 </html>
