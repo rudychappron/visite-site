@@ -24,27 +24,22 @@
 <!-- BARRE OUTILS -->
 <div class="toolbar">
 
-    <!-- 🔍 RECHERCHE -->
     <input id="search" type="text" placeholder="Rechercher…" onkeyup="onSearchChange()">
 
-    <!-- 🔽 FILTRE VISITE -->
     <select id="filterVisite" onchange="onFilterChange()">
         <option value="all">Tous</option>
         <option value="visite">Visités</option>
         <option value="nonvisite">Non visités</option>
     </select>
 
-    <!-- 🔽 FILTRE TYPE — DYNAMIQUE -->
     <select id="filterType" onchange="onFilterChange()">
         <option value="all">Tous les types</option>
     </select>
 
-    <!-- ➕ AJOUTER -->
     <button class="btn-primary" onclick="goAdd()">
         <i class="fa-solid fa-plus"></i> Ajouter
     </button>
 
-    <!-- 🧹 VIDER CACHE -->
     <button class="btn-primary" onclick="clearCache()">
         <i class="fa-solid fa-broom"></i> Vider cache
     </button>
@@ -61,7 +56,8 @@
             <th onclick="sortBy('type')">Type</th>
             <th>Adresse complète</th>
             <th>Waze</th>
-            <th onclick="sortBy('km')">KM</th>
+            <th onclick="sortBy('vol')">Vol d’oiseau</th>
+            <th onclick="sortBy('km')">KM Route</th>
             <th>Temps</th>
             <th>Actions</th>
         </tr>
@@ -69,11 +65,8 @@
     <tbody></tbody>
 </table>
 
-<!-- Auth -->
 <script src="auth.js?v=1"></script>
-
-<!-- App -->
-<script src="app.js?v=200"></script>
+<script src="app.js?v=300"></script>
 
 </body>
 </html>
