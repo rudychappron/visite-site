@@ -1,5 +1,5 @@
 /****************************************************
- * HASH SHA-256 DU MOT DE PASSE (Chappron1992)
+ * HASH SHA-256
  ****************************************************/
 const HASH = "2a6cdd3069d05b464c42d7762a72b88c7f7e39a32256bec00afc6ec42487c1ea";
 
@@ -11,7 +11,6 @@ async function sha256(str) {
     "SHA-256",
     new TextEncoder().encode(str)
   );
-
   return Array.from(new Uint8Array(buf))
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
@@ -23,10 +22,10 @@ async function sha256(str) {
 async function login() {
   const u = document.getElementById("user").value.trim();
   const p = document.getElementById("pass").value.trim();
+  const errorBox = document.getElementById("login-error");
 
   if (!u || !p) {
-    document.getElementById("login-error").innerText =
-      "⚠️ Veuillez entrer identifiant + mot de passe.";
+    errorBox.textContent = "⚠️ Veuillez entrer identifiant + mot de passe.";
     return;
   }
 
@@ -36,8 +35,7 @@ async function login() {
     localStorage.setItem("session", "ok");
     location.href = "dashboard.html";
   } else {
-    document.getElementById("login-error").innerText =
-      "❌ Identifiants incorrects";
+    errorBox.textContent = "❌ Identifiants incorrects";
   }
 }
 
@@ -50,10 +48,9 @@ function logout() {
 }
 
 /****************************************************
- * PROTECTION AUTOMATIQUE DES PAGES
+ * PROTECTION DES PAGES
  ****************************************************/
-if (!location.href.includes("index.html")) {
-  if (localStorage.getItem("session") !== "ok") {
-    location.href = "index.html";
-  }
+if (!location.pathname.endsWith("index.html") &&
+    localStorage.getItem("session") !== "ok") {
+  location.href = "index.html";
 }
