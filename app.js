@@ -39,22 +39,21 @@ async function loadMagasins() {
 /***********************************************************
  * UPDATE VISITÉ – 100% FIABLE
  ***********************************************************/
-async function toggleVisite(realIndex, checked) {
+async function toggleVisite(index, checked) {
 
-  // On récupère l'objet magasin
-  const mg = window.magasins[realIndex];
+  const row = window.magasins[index];
+  row[1] = checked;
 
-  // On modifie la colonne "fait"
-  mg.data[1] = checked;
-
-  console.log("UPDATE → RowIndex =", mg.rowIndex, "Code =", mg.data[0]);
+  console.log("== DEBUG VISITE ==");
+  console.log("INDEX ENVOYÉ :", index);
+  console.log("CODE :", row[0]);
 
   await fetch(APPS_SCRIPT_URL, {
     method: "POST",
     body: JSON.stringify({
       action: "update",
-      index: mg.rowIndex,   // ⭐ EXACT, Apps Script fera +2
-      row: mg.data,
+      index: index,
+      row,
       origin: ALLOWED_ORIGIN
     })
   });
