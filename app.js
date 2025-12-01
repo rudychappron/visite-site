@@ -1,24 +1,24 @@
-// =====================================
-// CONFIG
-// =====================================
+/***************************************************
+ * PARTIE 1 — CONFIG + OUTILS
+ ***************************************************/
 const API = "https://winter-bar-234b.rudychappron.workers.dev";
 
 window.userLat = null;
 window.userLng = null;
 
 let gpsReady = false;
-let sortCol = null;
+let sortCol = "vol";      // tri par défaut = distance vol d’oiseau
 let sortAsc = true;
 
 let addressCache = {};
+let fullMagList = [];
+let typeList = [];
 
-let fullMagList = [];   // RAW depuis Sheets
-let typeList = [];      // Types dynamiques
 
 
-// =====================================
-// HAVERSINE
-// =====================================
+/***************************************************
+ * HAVERSINE — VOL D’OISEAU
+ ***************************************************/
 function haversine(lat1, lon1, lat2, lon2) {
     if (!lat1 || !lon1 || !lat2 || !lon2) return 99999;
 
@@ -36,13 +36,13 @@ function haversine(lat1, lon1, lat2, lon2) {
 }
 
 
-// =====================================
-// ORS ROUTE DISTANCE
-// =====================================
+
+/***************************************************
+ * ORS — DISTANCE ROUTE (FAIBLE FRÉQUENCE)
+ ***************************************************/
 let lastORS = 0;
 
 async function getRouteDistance(lat1, lng1, lat2, lng2) {
-
     const now = Date.now();
     if (now - lastORS < 1200) return null;
     lastORS = now;
@@ -60,7 +60,6 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
         });
 
         if (!res.ok) return null;
-
         const json = await res.json();
         if (!json.routes) return null;
 
@@ -83,9 +82,9 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
 
 
 
-// =====================================
-// NORMALISATION ADRESSE + CACHE
-// =====================================
+/***************************************************
+ * ADRESSE NORMALISÉE + CACHE
+ ***************************************************/
 async function normalizeAddress(a, cp, v) {
     const key = a + cp + v;
 
@@ -113,9 +112,9 @@ async function normalizeAddress(a, cp, v) {
 
 
 
-// =====================================
-// GET MAGASINS
-// =====================================
+/***************************************************
+ * GET MAGASINS
+ ***************************************************/
 async function getMagasins() {
     try {
         const res = await fetch(`${API}/get`);
@@ -128,9 +127,9 @@ async function getMagasins() {
 
 
 
-// =====================================
-// SAUVEGARDE VISITE
-// =====================================
+/***************************************************
+ * SAVE VISITE
+ ***************************************************/
 async function toggleVisite(code, el) {
     await fetch(`${API}/updateVisite`, {
         method: "POST",
@@ -141,34 +140,38 @@ async function toggleVisite(code, el) {
         })
     });
 
-    loadMagasins();
+    // Ne PAS recharger tableau : pas besoin
 }
 
 
+/***************************************************
+ * PARTIE 2 — RECHERCHE + FILTRES + TRI + AFFICHAGE
+ ***************************************************/
 
-// =====================================
-// TRI
-// =====================================
+
+/***********************
+ * Recherche / Filtres
+ ***********************/
+function onSearchChange() { renderTable(); }
+function onFilterChange() { renderTable(); }
+
+
+/***********************
+ * TRI
+ ***********************/
 function sortBy(col) {
     if (sortCol === col) sortAsc = !sortAsc;
     else { sortCol = col; sortAsc = true; }
 
-    loadMagasins();
+    renderTable();
 }
 
 
 
-// =====================================
-// FILTRES + RECHERCHE
-// =====================================
-function onSearchChange() { loadMagasins(); }
-function onFilterChange() { loadMagasins(); }
-
-
-// =====================================
-// AFFICHAGE TABLEAU
-// =====================================
-async function loadMagasins() {
+/***************************************************
+ * RENDER TABLE — GÉNÈRE LE TABLEAU UNE SEULE FOIS
+ ***************************************************/
+async function renderTable() {
 
     const tbody = document.querySelector("tbody");
     tbody.innerHTML = "";
@@ -177,6 +180,7 @@ async function loadMagasins() {
     const fVisite = document.getElementById("filterVisite").value;
     const fType = document.getElementById("filterType").value;
 
+    // Construction de la liste
     let list = fullMagList.map(r => ({
         code: r.code,
         visite: r.visite,
@@ -187,11 +191,13 @@ async function loadMagasins() {
         ville: r.ville,
         lat: r.lat,
         lng: r.lng,
-        dist: (window.userLat ? haversine(window.userLat, window.userLng, r.lat, r.lng) : 99999)
+        distVoie: (window.userLat ? haversine(window.userLat, window.userLng, r.lat, r.lng) : 99999)
     }));
 
 
-    // 🔍 FILTRE RECHERCHE
+    /***********************
+     * 1️⃣ Filtre recherche
+     ***********************/
     list = list.filter(m =>
         m.code.toString().includes(search) ||
         m.nom.toLowerCase().includes(search) ||
@@ -200,48 +206,79 @@ async function loadMagasins() {
     );
 
 
-    // 🟦 FILTRE VISITE
+    /***********************
+     * 2️⃣ Filtre Visite
+     ***********************/
     if (fVisite === "visite") list = list.filter(m => m.visite);
     if (fVisite === "nonvisite") list = list.filter(m => !m.visite);
 
-    // 🟪 FILTRE TYPE
+
+    /***********************
+     * 3️⃣ Filtre Type dynamique
+     ***********************/
     if (fType !== "all") list = list.filter(m => m.type === fType);
 
 
-    // 🔽 TRI
+
+    /***********************
+     * 4️⃣ TRI
+     ***********************/
     if (sortCol === "code") list.sort((a,b)=> sortAsc ? a.code - b.code : b.code - a.code);
     if (sortCol === "nom") list.sort((a,b)=> sortAsc ? a.nom.localeCompare(b.nom) : b.nom.localeCompare(a.nom));
     if (sortCol === "type") list.sort((a,b)=> sortAsc ? a.type.localeCompare(b.type) : b.type.localeCompare(a.type));
     if (sortCol === "visite") list.sort((a,b)=> sortAsc ? a.visite - b.visite : b.visite - a.visite);
-    if (sortCol === "km") list.sort((a,b)=> sortAsc ? a.dist - b.dist : b.dist - a.dist);
+
+    // 🔥 TRI PAR DÉFAUT = distance vol d'oiseau
+    if (sortCol === "vol") list.sort((a,b)=> sortAsc ? a.distVoie - b.distVoie : b.distVoie - a.distVoie));
 
 
-    // 🔁 LIGNES
+
+    /***************************************************
+     * 5️⃣ GENERATION DES LIGNES
+     ***************************************************/
     for (const m of list) {
 
-        let kmTxt = "-";
-        let tempsTxt = "-";
-
-        if (gpsReady && m.lat && m.lng) {
-            const info = await getRouteDistance(window.userLat, window.userLng, m.lat, m.lng);
-            if (info) { kmTxt = info.km; tempsTxt = info.duree; }
-        }
-
+        // Adresse normalisée (en cache instant)
         const fullAdr = await normalizeAddress(m.adresse, m.cp, m.ville);
+
+        // Lien waze
         const waze = `https://waze.com/ul?ll=${m.lat},${m.lng}&navigate=yes`;
 
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
             <td>${m.code}</td>
-            <td><input type="checkbox" ${m.visite ? "checked" : ""} onchange="toggleVisite('${m.code}', this)"></td>
+
+            <td>
+                <input type="checkbox" ${m.visite ? "checked" : ""}
+                       onchange="toggleVisite('${m.code}', this)">
+            </td>
+
             <td>${m.nom}</td>
             <td>${m.type}</td>
             <td>${fullAdr}</td>
-            <td><a href="${waze}" target="_blank"><img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg" width="30"></a></td>
-            <td>${kmTxt}</td>
-            <td>${tempsTxt}</td>
-            <td><button onclick="editMagasin('${m.code}')">✏️</button></td>
+
+            <td>
+                <a href="${waze}" target="_blank">
+                    <img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg"
+                         width="30">
+                </a>
+            </td>
+
+            <!-- 🔥 Distance vol d’oiseau -->
+            <td class="volCell" data-code="${m.code}">
+                ${m.distVoie.toFixed(1)} km
+            </td>
+
+            <!-- 🔥 Distance ORS (mise à jour auto) -->
+            <td class="kmCell" data-code="${m.code}">-</td>
+
+            <!-- 🔥 Temps ORS (mise à jour auto) -->
+            <td class="timeCell" data-code="${m.code}">-</td>
+
+            <td>
+                <button onclick="editMagasin('${m.code}')">✏️</button>
+            </td>
         `;
 
         tbody.appendChild(tr);
@@ -250,14 +287,13 @@ async function loadMagasins() {
 
 
 
-// =====================================
-// CHARGEMENT INITIAL + TYPES DYNAMIQUES
-// =====================================
+/***************************************************
+ * INITIALISATION — GET + TYPES DYNAMIQUES
+ ***************************************************/
 async function initMagasins() {
 
     const raw = await getMagasins();
 
-    // Convert RAW
     fullMagList = raw.slice(1).map(r => ({
         code: r[0],
         visite: (r[1] === true || r[1] === "TRUE"),
@@ -271,7 +307,9 @@ async function initMagasins() {
     }));
 
 
-    // 🔥 TYPES DYNAMIQUES
+    /***********************
+     * Chargement des types dynamiques
+     ***********************/
     typeList = [...new Set(fullMagList.map(m => m.type).filter(t => t && t.trim() !== ""))];
 
     const sel = document.getElementById("filterType");
@@ -281,40 +319,104 @@ async function initMagasins() {
         sel.innerHTML += `<option value="${t}">${t}</option>`;
     });
 
-    loadMagasins();
+    /***********************
+     * Affiche tableau une seule fois
+     ***********************/
+    renderTable();
+}
+
+
+/***************************************************
+ * PARTIE 3 — GPS + UPDATE DISTANCES SANS REFRESH
+ ***************************************************/
+
+
+/***************************************************
+ * MISE À JOUR DES DISTANCES (VOL + ORS)
+ * ⚡ Sans recharger le tableau
+ ***************************************************/
+async function updateDistancesOnly() {
+
+    if (!gpsReady) return;
+
+    // Pour chaque magasin → MAJ 3 cellules
+    fullMagList.forEach(async m => {
+
+        /***************
+         * 1️⃣ MAJ VOL D’OISEAU
+         ***************/
+        const vol = haversine(window.userLat, window.userLng, m.lat, m.lng);
+
+        const volCell = document.querySelector(`.volCell[data-code="${m.code}"]`);
+        if (volCell) volCell.innerText = vol.toFixed(1) + " km";
+
+
+        /***************
+         * 2️⃣ MAJ ROUTE ORS (KM + TEMPS)
+         ***************/
+        getRouteDistance(window.userLat, window.userLng, m.lat, m.lng)
+        .then(info => {
+            if (!info) return;
+
+            const kmCell = document.querySelector(`.kmCell[data-code="${m.code}"]`);
+            const timeCell = document.querySelector(`.timeCell[data-code="${m.code}"]`);
+
+            if (kmCell) kmCell.innerText = info.km;
+            if (timeCell) timeCell.innerText = info.duree;
+        });
+
+    });
 }
 
 
 
-// =====================================
-// GPS
-// =====================================
+/***************************************************
+ * GPS LIVE — déclenche MAJ distances + tri distance
+ ***************************************************/
 navigator.geolocation.watchPosition(
     pos => {
         window.userLat = pos.coords.latitude;
         window.userLng = pos.coords.longitude;
         gpsReady = true;
-        loadMagasins();
+
+        // À la première localisation → tri automatique
+        if (sortCol === "vol") renderTable();
+
+        // Puis MAJ distances live
+        updateDistancesOnly();
     },
     err => console.warn("GPS refusé:", err),
     { enableHighAccuracy: true }
 );
 
 
-// =====================================
-// Navigation
-// =====================================
+
+/***************************************************
+ * REFRESH AUTOMATIQUE TOUTES LES 30 SECONDES
+ * ✔ Sans recharger le tableau
+ ***************************************************/
+setInterval(() => {
+    if (gpsReady) updateDistancesOnly();
+}, 30000);
+
+
+
+/***************************************************
+ * NAVIGATION
+ ***************************************************/
 function editMagasin(code) { location.href = `edit-magasin.html?code=${code}`; }
 function goAdd() { location.href = "add-magasin.html"; }
 
-// Cache
 function clearCache() {
     addressCache = {};
     alert("Cache vidé ✔");
 }
 
 
-// =====================================
-// START
-// =====================================
+
+/***************************************************
+ * START — CHARGEMENT INITIAL
+ ***************************************************/
 initMagasins();
+
+
