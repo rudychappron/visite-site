@@ -1,218 +1,88 @@
 /***********************************************************
- * CONFIGURATION
+ * CONFIG
  ***********************************************************/
-const HERE_API_KEY = "5TuJy6GHPhdQDvXGdFa8Hq984DX0NsSGvl3dRZjx0uo";
-const ALLOWED_ORIGIN = "https://rudychappron.github.io";
-
-const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwSHdLecIBM3RcVFyzQpm8Xrj2aKiyK-seP6upTjY0Wf-CWklBDdBr9x5DlbVx4znafGQ/exec";
+const SHEET = "Magasins";
+const ALLOWED = "https://rudychappron.github.io";
 
 /***********************************************************
- * CHARGEMENT MAGASINS
+ * GET — LECTURE DES DONNÉES
  ***********************************************************/
-async function loadMagasins() {
-  try {
-    const url = `${APPS_SCRIPT_URL}?origin=${encodeURIComponent(ALLOWED_ORIGIN)}`;
-    const res = await fetch(url);
-    const json = await res.json();
+function doGet(e) {
 
-    if (!json.ok) {
-      alert("Erreur API");
-      return;
-    }
-
-    window.magasins = json.data.slice(1);
-    initFilters();
-    renderList();
-
-  } catch (e) {
-    console.error(e);
-    alert("Erreur réseau");
+  const origin = e?.parameter?.origin || "";
+  if (origin !== ALLOWED) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ ok: false, error: "Origin not allowed" })
+    ).setMimeType(ContentService.MimeType.JSON);
   }
+
+  const ss = SpreadsheetApp.openById("11cswsfE5PVqNQoP-lS44PItpI_GeV6WHfoo5x8McC_g");
+  const sh = ss.getSheetByName(SHEET);
+  const data = sh.getDataRange().getValues();
+
+  return ContentService.createTextOutput(
+    JSON.stringify({ ok: true, data })
+  ).setMimeType(ContentService.MimeType.JSON);
 }
 
 /***********************************************************
- * UPDATE VISITÉ
+ * POST — AJOUT / UPDATE / DELETE
  ***********************************************************/
-async function toggleVisite(index, checked) {
-  const row = window.magasins[index];
+function doPost(e) {
 
-  row[1] = checked; // colonne FAIT
+  const origin = e?.parameter?.origin || "";
+  if (origin !== ALLOWED) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ ok: false, error: "Origin not allowed" })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
 
-  await fetch(APPS_SCRIPT_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "update",
-      index: index + 1,
-      row,
-      origin: ALLOWED_ORIGIN
-    })
-  });
+  const body = JSON.parse(e.postData.contents || "{}");
 
-  console.log("Visité mis à jour !");
-}
+  const ss = SpreadsheetApp.openById("11cswsfE5PVqNQoP-lS44PItpI_GeV6WHfoo5x8McC_g");
+  const sh = ss.getSheetByName(SHEET);
 
-/***********************************************************
- * SUPPRESSION
- ***********************************************************/
-async function deleteMagasin(index) {
-  if (!confirm("Supprimer ce magasin ?")) return;
+  /********************
+   * AJOUT
+   ********************/
+  if (body.action === "add") {
+    sh.appendRow(body.row);
+    return ContentService.createTextOutput(
+      JSON.stringify({ ok: true })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
 
-  await fetch(APPS_SCRIPT_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "delete",
-      index: index + 1,
-      origin: ALLOWED_ORIGIN
-    })
-  });
-
-  window.magasins.splice(index, 1);
-  renderList();
-}
-
-/***********************************************************
- * ROUTE HERE
- ***********************************************************/
-async function getRoute(lat1, lng1, lat2, lng2) {
-  if (!lat2 || !lng2) return null;
-
-  const url =
-    `https://router.hereapi.com/v8/routes?transportMode=car` +
-    `&origin=${lat1},${lng1}` +
-    `&destination=${lat2},${lng2}` +
-    `&return=summary&apikey=${HERE_API_KEY}`;
-
-  const res = await fetch(url);
-  const json = await res.json();
-
-  if (!json.routes) return null;
-
-  const s = json.routes[0].sections[0].summary;
-
-  return {
-    km: (s.length / 1000).toFixed(1),
-    minutes: Math.round(s.duration / 60)
-  };
-}
-
-/***********************************************************
- * LIEN WAZE
- ***********************************************************/
-function wazeLink(lat, lng) {
-  return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
-}
-
-/***********************************************************
- * FILTRES
- ***********************************************************/
-function initFilters() {
-  const types = [...new Set(window.magasins.map(m => m[3]).filter(Boolean))];
-  const sel = document.getElementById("filterType");
-
-  sel.innerHTML = `<option value="all">Tous les types</option>`;
-  types.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
-}
-
-function applyFilters(list) {
-  const txt = document.getElementById("search").value.toLowerCase();
-  const fVisite = document.getElementById("filterVisite").value;
-  const fType = document.getElementById("filterType").value;
-
-  if (txt)
-    list = list.filter(m =>
-      (m[2] || "").toLowerCase().includes(txt) ||
-      (m[5] || "").toLowerCase().includes(txt) ||
-      (m[7] || "").toLowerCase().includes(txt)
-    );
-
-  if (fVisite === "visite") list = list.filter(m => m[1] === true);
-  if (fVisite === "nonvisite") list = list.filter(m => m[1] === false);
-
-  if (fType !== "all")
-    list = list.filter(m => m[3] === fType);
-
-  return list;
-}
-
-/***********************************************************
- * AFFICHAGE LISTE
- ***********************************************************/
-async function renderList() {
-  const container = document.getElementById("list");
-  container.innerHTML = "Chargement…";
-
-  navigator.geolocation.getCurrentPosition(async pos => {
-    const latUser = pos.coords.latitude;
-    const lngUser = pos.coords.longitude;
-
-    container.innerHTML = "";
-
-    const filtered = applyFilters([...window.magasins]);
-
-    for (const m of filtered) {
-
-      const index = window.magasins.indexOf(m);
-      const lat = m[11];
-      const lng = m[12];
-
-      let route = null;
-      if (lat && lng) route = await getRoute(latUser, lngUser, lat, lng);
-
-      const card = document.createElement("div");
-      card.className = "magasin-card";
-
-      card.innerHTML = `
-        <div class="mag-header">
-          <h3>${m[2] || "Nom manquant"}</h3>
-
-          <label class="visit-toggle">
-            <input type="checkbox" ${m[1] ? "checked" : ""} 
-                   onchange="toggleVisite(${index}, this.checked)">
-            <span>Visité</span>
-          </label>
-        </div>
-
-        <p class="adresse">${m[5] || ""} ${m[6] || ""} ${m[7] || ""}</p>
-
-        ${route ?
-          `<p class="distance">📍 ${route.km} km | ⏱ ${route.minutes} min</p>` :
-          `<p class="distance">📍 Distance inconnue</p>`}
-
-        <div class="actions">
-          <a href="${wazeLink(lat, lng)}" target="_blank" class="btn-waze">Waze</a>
-
-          <button class="btn-edit" onclick="goEdit('${m[0]}')">
-            Modifier
-          </button>
-
-          <button class="btn-delete" onclick="deleteMagasin(${index})">
-            Supprimer
-          </button>
-        </div>
-      `;
-
-      container.appendChild(card);
+  /********************
+   * UPDATE
+   ********************/
+  if (body.action === "update") {
+    const index = Number(body.index);
+    if (index < 1) {
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: false, error: "Index incorrect" })
+      ).setMimeType(ContentService.MimeType.JSON);
     }
-  });
-}
 
-/***********************************************************
- * NAVIGATION
- ***********************************************************/
-function goAdd() {
-  location.href = "add-magasin.html";
-}
-function goEdit(code) {
-  localStorage.setItem("editCode", code);
-  location.href = "edit-magasin.html";
-}
-function logout() {
-  localStorage.removeItem("session");
-  location.href = "index.html";
-}
+    sh.getRange(index + 1, 1, 1, body.row.length).setValues([body.row]);
 
-/***********************************************************
- * LANCEMENT
- ***********************************************************/
-loadMagasins();
+    return ContentService.createTextOutput(
+      JSON.stringify({ ok: true })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  /********************
+   * DELETE
+   ********************/
+  if (body.action === "delete") {
+    const index = Number(body.index);
+    sh.deleteRow(index + 1);
+
+    return ContentService.createTextOutput(
+      JSON.stringify({ ok: true })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  return ContentService.createTextOutput(
+    JSON.stringify({ ok: false, error: "Action inconnue" })
+  ).setMimeType(ContentService.MimeType.JSON);
+}
