@@ -41,22 +41,25 @@ async function loadMagasins() {
  ***********************************************************/
 async function toggleVisite(index, checked) {
 
-  const mg = window.magasins[index];   // objet { rowIndex, data }
-  const row = mg.data;                 // tableau réel des colonnes
+  const mag = window.magasins[index];
 
-  row[1] = checked; // colonne "fait"
+  // sécurité
+  if (!mag) return;
 
-  console.log("== DEBUG VISITE ==");
-  console.log("INDEX ENVOYÉ :", mg.rowIndex);
-  console.log("CODE :", row[0]);
+  mag.data[1] = checked;  // colonne B "fait"
 
-  await fetch(APPS_SCRIPT_URL, {
+  console.log("Envoi update avec : ", {
+    action: "update",
+    index: mag.rowIndex,    // ⭐ UTILISATION DU BON INDEX
+    row: mag.data
+  });
+
+  await fetch(APPS_SCRIPT_URL + "?origin=" + ALLOWED_ORIGIN, {
     method: "POST",
     body: JSON.stringify({
       action: "update",
-      index: mg.rowIndex,   // ⭐ EXACT — AppsScript fera +2
-      row: row,
-      origin: ALLOWED_ORIGIN
+      index: mag.rowIndex,   // ⭐ le seul index correct !
+      row: mag.data
     })
   });
 
