@@ -160,43 +160,54 @@ async function renderList() {
 
   navigator.geolocation.getCurrentPosition(async pos => {
 
+    const latUser = pos.coords.latitude;
+    const lngUser = pos.coords.longitude;
+
     container.innerHTML = "";
+
     const filtered = applyFilters([...window.magasins]);
 
-    for (const mg of filtered) {
+    for (const m of filtered) {
 
-      const index = window.magasins.indexOf(mg);
-      const m = mg.data;
+      const index = window.magasins.indexOf(m);
+      const row = m.data;  // ⭐ ON PREND LES DONNÉES
 
-      const lat = m[11];
-      const lng = m[12];
+      const lat = row[11];
+      const lng = row[12];
 
       let route = null;
-      if (lat && lng) route = await getRoute(pos.coords.latitude, pos.coords.longitude, lat, lng);
+      if (lat && lng) route = await getRoute(latUser, lngUser, lat, lng);
 
       const card = document.createElement("div");
       card.className = "magasin-card";
 
       card.innerHTML = `
         <div class="mag-header">
-          <h3>${m[2] || "Nom manquant"}</h3>
+          <h3>${row[2] || "Nom manquant"}</h3>
 
           <label class="visit-toggle">
-            <input type="checkbox" ${m[1] ? "checked" : ""} 
+            <input type="checkbox" ${row[1] ? "checked" : ""} 
                    onchange="toggleVisite(${index}, this.checked)">
             <span>Visité</span>
           </label>
         </div>
 
-        <p class="adresse">${m[5]} ${m[6]} ${m[7]}</p>
+        <p class="adresse">${row[5]} ${row[6]} ${row[7]}</p>
 
-        ${route ? `<p class="distance">📍 ${route.km} km | ⏱ ${route.minutes} min</p>` :
+        ${route ?
+          `<p class="distance">📍 ${route.km} km | ⏱ ${route.minutes} min</p>` :
           `<p class="distance">📍 Distance inconnue</p>`}
 
         <div class="actions">
           <a href="${wazeLink(lat, lng)}" target="_blank" class="btn-waze">Waze</a>
-          <button class="btn-edit" onclick="goEdit('${m[0]}')">Modifier</button>
-          <button class="btn-delete" onclick="deleteMagasin(${index})">Supprimer</button>
+
+          <button class="btn-edit" onclick="goEdit('${row[0]}')">
+            Modifier
+          </button>
+
+          <button class="btn-delete" onclick="deleteMagasin(${index})">
+            Supprimer
+          </button>
         </div>
       `;
 
