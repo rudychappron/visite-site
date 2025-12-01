@@ -24,27 +24,22 @@
 <!-- BARRE OUTILS -->
 <div class="toolbar">
 
-    <!-- Recherche -->
     <input id="search" type="text" placeholder="Rechercher…" onkeyup="onSearchChange()">
 
-    <!-- Filtre Visite -->
     <select id="filterVisite" onchange="onFilterChange()">
         <option value="all">Tous</option>
         <option value="visite">Visités</option>
         <option value="nonvisite">Non visités</option>
     </select>
 
-    <!-- Filtre Type -->
     <select id="filterType" onchange="onFilterChange()">
         <option value="all">Tous les types</option>
     </select>
 
-    <!-- Ajouter -->
     <button class="btn-primary" onclick="goAdd()">
         <i class="fa-solid fa-plus"></i> Ajouter
     </button>
 
-    <!-- Vider cache -->
     <button class="btn-primary" onclick="clearCache()">
         <i class="fa-solid fa-broom"></i> Vider cache
     </button>
@@ -55,31 +50,25 @@
 <table class="magasins-table">
     <thead>
         <tr>
-            <th onclick="sortBy('code')">Code</th>
-            <th onclick="sortBy('visite')">Visité</th>
-            <th onclick="sortBy('nom')">Nom complet</th>
-            <th onclick="sortBy('type')">Type</th>
+            <th>Code</th>
+            <th>Visité</th>
+            <th>Nom complet</th>
+            <th>Type</th>
             <th>Adresse complète</th>
             <th>Waze</th>
-
-            <!-- Vol d’oiseau (triable localement) -->
-            <th onclick="sortBy('vol')">Vol d’oiseau</th>
-
-            <!-- KM Route (NON triable → tri serveur déjà fait) -->
+            <th>Vol d’oiseau</th>
             <th>KM Route</th>
-
-            <!-- Temps Route (NON triable) -->
             <th>Temps</th>
-
             <th>Actions</th>
         </tr>
     </thead>
-    <tbody></tbody>
+
+    <!-- ❗❗❗ IMPORTANT → C’est ici que app.js doit afficher -->
+    <tbody id="list"></tbody>
 </table>
 
-<!-- Scripts -->
 <script src="auth.js?v=1"></script>
-<script src="app.js?v=10002"></script>
+<script src="app.js?v=10003"></script>
 
 </body>
 </html>
