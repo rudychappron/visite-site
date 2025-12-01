@@ -229,7 +229,7 @@ async function renderTable() {
     if (sortCol === "visite") list.sort((a,b)=> sortAsc ? a.visite - b.visite : b.visite - a.visite);
 
     // 🔥 TRI PAR DÉFAUT = distance vol d'oiseau
-    if (sortCol === "vol") list.sort((a,b)=> sortAsc ? a.distVoie - b.distVoie : b.distVoie - a.distVoie));
+    if (sortCol === "vol") list.sort((a,b)=> sortAsc ? a.distVoie - b.distVoie : b.distVoie - a.distVoie);
 
 
 
