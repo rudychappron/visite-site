@@ -2,7 +2,7 @@
  * CONFIG
  ***********************************************************/
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwSHdLecIBM3RcVFyzQpm8Xrj2aKiyK-seP6upTjY0Wf-CWklBDdBr9x5DlbVx4znafGQ/exec";
+  "https://script.google.com/macros/s/AKfycbxamWQ5gx9ofSAwYMttyOjsju_XSdDgHdTBFtksLkXPH50WPmqp0AYHZAIq0o_KR4ZMyQ/exec";
 
 /***********************************************************
  * CHARGER LE MAGASIN
