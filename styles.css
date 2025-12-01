@@ -1,113 +1,144 @@
-/***************************************************
- * LISTE MAGASINS — MODE CARTES PRO
- ***************************************************/
-.magasin-list, #list {
-  padding: 15px;
+/***********************************************************
+ * STYLE PRO — LISTE MAGASINS
+ ***********************************************************/
+
+#list {
+    padding: 20px;
 }
 
-/* Carte magasin */
+/* Carte */
 .magasin-card {
-  background: #ffffff;
-  padding: 15px;
-  border-radius: 12px;
-  margin-bottom: 15px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  border: 1px solid #e6e6e6;
+    background: #ffffff;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+    transition: 0.2s;
+    border: 1px solid #e8e8e8;
 }
 
-/* Titre + toggle visité */
+.magasin-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+}
+
+/* Header de carte */
 .mag-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.magasin-card h3 {
-  margin: 0;
-  font-size: 18px;
-  color: #222;
+.mag-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
 }
 
-/* Case Visité */
+/* Badge Visité */
 .visit-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
 }
 
 .visit-toggle input {
-  width: 18px;
-  height: 18px;
+    transform: scale(1.2);
 }
 
 /* Adresse */
-.magasin-card .adresse {
-  margin: 10px 0;
-  color: #444;
-  font-size: 14px;
+.adresse {
+    margin: 8px 0 5px 0;
+    font-size: 14px;
+    color: #555;
 }
 
 /* Distance */
-.magasin-card .distance {
-  font-size: 14px;
-  margin: 8px 0;
-  color: #333;
+.distance {
+    font-size: 15px;
+    margin: 5px 0 15px 0;
+    font-weight: 500;
 }
 
-/* Bar actions */
+/* Zone d’action */
 .actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
 }
 
-/***************************************************
- * BOUTON WAZE (VRAI STYLE)
- ***************************************************/
+/* Bouton Waze logo officiel */
 .btn-waze {
-  background: #2A76FF;
-  color: white;
-  padding: 10px 14px;
-  border-radius: 6px;
-  text-decoration: none;
-  font-size: 14px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #03a9f4;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: 0.2s;
 }
 
 .btn-waze:hover {
-  background: #1d5edd;
+    background: #0288d1;
 }
 
-/***************************************************
- * BOUTONS EDIT + DELETE
- ***************************************************/
+/* Icône Waze */
+.btn-waze::before {
+    content: "";
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    background-image: url("https://upload.wikimedia.org/wikipedia/commons/2/2c/Waze_Logo.svg");
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+/* Bouton Modifier */
 .btn-edit {
-  background: #ffa500;
-  border: none;
-  padding: 10px 14px;
-  border-radius: 6px;
-  color: white;
-  cursor: pointer;
-  font-size: 14px;
+    background: #ffd54f;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
 }
 
 .btn-edit:hover {
-  background: #e38f00;
+    background: #ffca28;
 }
 
+/* Bouton Supprimer */
 .btn-delete {
-  background: #ff3333;
-  border: none;
-  padding: 10px 14px;
-  border-radius: 6px;
-  color: white;
-  cursor: pointer;
-  font-size: 14px;
+    background: #e53935;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
 }
 
 .btn-delete:hover {
-  background: #d62828;
+    background: #c62828;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .actions button,
+    .actions a {
+        width: 100%;
+        text-align: center;
+    }
 }
