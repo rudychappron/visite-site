@@ -5,19 +5,18 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzcUr84EJSS0ngV
 // Charger les magasins
 // =============================
 async function loadMagasins() {
-    const res = await fetch(APPS_SCRIPT_URL + "?origin=" + encodeURIComponent(location.origin));
+    const url = APPS_SCRIPT_URL + "?origin=" + encodeURIComponent("https://rudychappron.github.io");
+
+    const res = await fetch(url);
     const json = await res.json();
 
     if (!json.ok) {
-        alert("Erreur de chargement");
+        alert("Erreur API : " + (json.error || ""));
         return;
     }
 
     const rows = json.data;
-    const header = rows[0];
-    const data = rows.slice(1);
-
-    window.magasins = data;
+    window.magasins = rows.slice(1); // ignore en-tête
     renderMagasins();
 }
 
@@ -33,11 +32,11 @@ async function getRoute(lat1, lng1, lat2, lng2) {
 
     if (!json.routes) return null;
 
-    const summary = json.routes[0].sections[0].summary;
+    const s = json.routes[0].sections[0].summary;
 
     return {
-        km: (summary.length / 1000).toFixed(1),
-        minutes: Math.round(summary.duration / 60)
+        km: (s.length / 1000).toFixed(1),
+        minutes: Math.round(s.duration / 60)
     };
 }
 
@@ -52,11 +51,14 @@ function wazeLink(lat, lng) {
 // Affichage magasins
 // =============================
 async function renderMagasins() {
+
     navigator.geolocation.getCurrentPosition(async pos => {
         const latUser = pos.coords.latitude;
         const lngUser = pos.coords.longitude;
 
         const list = document.getElementById("list");
+        if (!list) return;
+
         list.innerHTML = "";
 
         for (const m of window.magasins) {
@@ -73,10 +75,8 @@ async function renderMagasins() {
 
             div.innerHTML = `
                 <h3>${m[2]}</h3>
-                <p>${m[5]} ${m[6]} ${m[7]} </p>
-                ${route ? `
-                    <p>📍 ${route.km} km — ⏱ ${route.minutes} min</p>
-                ` : ""}
+                <p>${m[5]} ${m[6]} ${m[7]}</p>
+                ${route ? `<p>📍 ${route.km} km — ⏱ ${route.minutes} min</p>` : ""}
                 <a href="${wazeLink(lat,lng)}" target="_blank" class="btn">🚗 Waze</a>
             `;
 
