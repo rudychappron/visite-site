@@ -5,7 +5,7 @@ const HERE_API_KEY = "5TuJy6GHPhdQDvXGdFa8Hq984DX0NsSGvl3dRZjx0uo";
 const ALLOWED_ORIGIN = "https://rudychappron.github.io";
 
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwsfhbN2I34bLhJ2gqO1qmwkZdMuVK6M7oizQW_z-whLXwiu--cUN5S8w_N0XCWEnWMjw/exec";
+  "https://script.google.com/macros/s/AKfycbw55iouMkIi2DH8yuKWzY2RGjjKL2Z9PvA0N1bakqVWyH6AeVshrL3kYLQZnVJLVLVOMw/exec";
 
 /***********************************************************
  * CHARGER LES MAGASINS
