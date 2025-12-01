@@ -62,8 +62,6 @@ async function toggleVisite(index, checked) {
 
   console.log("Visité mis à jour !");
 }
-}
-
 /***********************************************************
  * SUPPRESSION
  ***********************************************************/
