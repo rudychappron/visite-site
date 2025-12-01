@@ -1,19 +1,18 @@
 /***********************************************************
- * CONFIGURATION
+ * CONFIG
  ***********************************************************/
 const HERE_API_KEY = "5TuJy6GHPhdQDvXGdFa8Hq984DX0NsSGvl3dRZjx0uo";
+const ALLOWED_ORIGIN = "https://rudychappron.github.io";
+
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbwsfhbN2I34bLhJ2gqO1qmwkZdMuVK6M7oizQW_z-whLXwiu--cUN5S8w_N0XCWEnWMjw/exec";
 
 /***********************************************************
- * CHARGEMENT DES MAGASINS
+ * CHARGER LES MAGASINS
  ***********************************************************/
 async function loadMagasins() {
   try {
-    const url =
-      APPS_SCRIPT_URL +
-      "?origin=" +
-      encodeURIComponent("https://rudychappron.github.io");
+    const url = `${APPS_SCRIPT_URL}?origin=${encodeURIComponent(ALLOWED_ORIGIN)}`;
 
     const res = await fetch(url);
     const json = await res.json();
@@ -41,9 +40,11 @@ async function loadMagasins() {
 async function getRoute(lat1, lng1, lat2, lng2) {
   if (!lat2 || !lng2) return null;
 
-  const url =
-    `https://router.hereapi.com/v8/routes?transportMode=car&origin=${lat1},${lng1}` +
-    `&destination=${lat2},${lng2}&return=summary&apikey=${HERE_API_KEY}`;
+  const url = 
+    `https://router.hereapi.com/v8/routes?transportMode=car` +
+    `&origin=${lat1},${lng1}` +
+    `&destination=${lat2},${lng2}` +
+    `&return=summary&apikey=${HERE_API_KEY}`;
 
   const res = await fetch(url);
   const json = await res.json();
@@ -66,17 +67,18 @@ function wazeLink(lat, lng) {
 }
 
 /***********************************************************
- * MISE À JOUR DU CHAMP "VISITÉ"
+ * METTRE À JOUR "VISITÉ"
  ***********************************************************/
-async function toggleVisite(index, value) {
-  window.magasins[index][1] = value;
+async function toggleVisite(index, checked) {
+  let row = window.magasins[index];
+  row[1] = checked ? true : false;
 
   await fetch(APPS_SCRIPT_URL, {
     method: "POST",
     body: JSON.stringify({
       action: "update",
       index: index + 1,
-      row: window.magasins[index]
+      row
     }),
   });
 
@@ -84,7 +86,7 @@ async function toggleVisite(index, value) {
 }
 
 /***********************************************************
- * SUPPRESSION MAGASIN
+ * SUPPRESSION
  ***********************************************************/
 async function deleteMagasin(index) {
   if (!confirm("Supprimer ce magasin ?")) return;
@@ -116,11 +118,12 @@ function initFilters() {
 }
 
 function applyFilters(list) {
-  const txt = document.getElementById("search").value.toLowerCase();
-  const filtreVisite = document.getElementById("filterVisite").value;
-  const filtreType = document.getElementById("filterType").value;
 
-  // Recherche
+  const txt = document.getElementById("search").value.toLowerCase();
+  const fVisite = document.getElementById("filterVisite").value;
+  const fType = document.getElementById("filterType").value;
+
+  // Recherche texte
   if (txt !== "") {
     list = list.filter(m =>
       (m[2] || "").toLowerCase().includes(txt) ||
@@ -129,13 +132,13 @@ function applyFilters(list) {
     );
   }
 
-  // Visité
-  if (filtreVisite === "visite") list = list.filter(m => m[1] === true);
-  if (filtreVisite === "nonvisite") list = list.filter(m => m[1] === false);
+  // Filtre Visité
+  if (fVisite === "visite") list = list.filter(m => m[1] === true);
+  if (fVisite === "nonvisite") list = list.filter(m => m[1] === false);
 
-  // Type
-  if (filtreType !== "all") {
-    list = list.filter(m => (m[3] || "") === filtreType);
+  // Filtre Type
+  if (fType !== "all") {
+    list = list.filter(m => (m[3] || "") === fType);
   }
 
   return list;
@@ -150,16 +153,19 @@ async function renderList() {
 
   container.innerHTML = "Chargement…";
 
-  navigator.geolocation.getCurrentPosition(async (pos) => {
+  navigator.geolocation.getCurrentPosition(async pos => {
+
     const latUser = pos.coords.latitude;
     const lngUser = pos.coords.longitude;
 
     container.innerHTML = "";
 
-    let filtered = applyFilters([...window.magasins]);
+    const filtered = applyFilters([...window.magasins]);
 
-    for (let i = 0; i < filtered.length; i++) {
-      const m = filtered[i];
+    filtered.forEach(async m => {
+
+      const index = window.magasins.indexOf(m);
+
       const lat = m[11];
       const lng = m[12];
 
@@ -175,7 +181,7 @@ async function renderList() {
 
           <label class="visit-toggle">
             <input type="checkbox" ${m[1] ? "checked" : ""} 
-                   onchange="toggleVisite(${window.magasins.indexOf(m)}, this.checked)">
+                   onchange="toggleVisite(${index}, this.checked)">
             <span>Visité</span>
           </label>
         </div>
@@ -184,27 +190,27 @@ async function renderList() {
 
         ${
           route
-            ? `<p class="distance">📍 ${route.km} km — ⏱ ${route.minutes} min</p>`
-            : `<p class="distance">📍 Distance non disponible</p>`
+          ? `<p class="distance">📍 ${route.km} km — ⏱ ${route.minutes} min</p>`
+          : `<p class="distance">📍 Distance non disponible</p>`
         }
 
         <div class="actions">
+
           <a href="${wazeLink(lat, lng)}" target="_blank" class="btn-waze">
-            🚗 Waze
+            Waze
           </a>
 
-          <button class="btn-edit" onclick="goEdit('${m[0]}')">
-            ✏️ Modifier
+          <button class="btn-edit" onclick="goEdit('${m[0]}')">Modifier</button>
+
+          <button class="btn-delete" onclick="deleteMagasin(${index})">
+            Supprimer
           </button>
 
-          <button class="btn-delete" onclick="deleteMagasin(${window.magasins.indexOf(m)})">
-            🗑️ Supprimer
-          </button>
         </div>
       `;
 
       container.appendChild(div);
-    }
+    });
   });
 }
 
