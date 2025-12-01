@@ -6,13 +6,15 @@ const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbzcUr84EJSS0ngVtLT2d5NFSIp24hCJNDgAShacHvClGUW8Kek4ZtXVlJGekIy2shSUIw/exec";
 
 /***********************************************************
- * CHARGEMENT DES MAGASINS
+ * LECTURE FEUILLE GOOGLE SHEETS
  ***********************************************************/
 async function loadMagasins() {
   try {
     const url =
-      APPS_SCRIPT_URL + "?origin=" +
-      encodeURIComponent("https://rudychappron.github.io");
+      APPS_SCRIPT_URL +
+      "?origin=" +
+      encodeURIComponent("https://rudychappron.github.io") +
+      "&action=get";
 
     const res = await fetch(url);
     const json = await res.json();
@@ -22,7 +24,7 @@ async function loadMagasins() {
       return;
     }
 
-    // Suppression de la première ligne = en-têtes
+    window.header = json.data[0];
     window.magasins = json.data.slice(1);
 
     renderList();
@@ -51,19 +53,55 @@ async function getRoute(lat1, lng1, lat2, lng2) {
 
   return {
     km: (s.length / 1000).toFixed(1),
-    minutes: Math.round(s.duration / 60)
+    minutes: Math.round(s.duration / 60),
   };
 }
 
 /***********************************************************
- * OUVRIR WAZE
+ * WAZE LINK
  ***********************************************************/
 function wazeLink(lat, lng) {
   return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 }
 
 /***********************************************************
- * AFFICHAGE VERSION LISTE
+ * METTRE À JOUR "VISITÉ"
+ ***********************************************************/
+async function toggleVisite(index, value) {
+  window.magasins[index][1] = value; // col "fait"
+
+  await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "update",
+      index: index + 1,
+      row: window.magasins[index],
+    }),
+  });
+
+  console.log("Visité mis à jour !");
+}
+
+/***********************************************************
+ * SUPPRESSION
+ ***********************************************************/
+async function deleteMagasin(index) {
+  if (!confirm("Supprimer ce magasin ?")) return;
+
+  await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "delete",
+      index: index + 1,
+    }),
+  });
+
+  window.magasins.splice(index, 1);
+  renderList();
+}
+
+/***********************************************************
+ * AFFICHAGE VERSION CARTES
  ***********************************************************/
 async function renderList() {
   const container = document.getElementById("list");
@@ -77,31 +115,49 @@ async function renderList() {
 
     container.innerHTML = "";
 
-    for (const m of window.magasins) {
+    for (let i = 0; i < window.magasins.length; i++) {
+      const m = window.magasins[i];
       const lat = m[11];
       const lng = m[12];
 
       let route = null;
-      if (lat && lng) {
-        route = await getRoute(latUser, lngUser, lat, lng);
-      }
+      if (lat && lng) route = await getRoute(latUser, lngUser, lat, lng);
 
       const card = document.createElement("div");
       card.className = "magasin-card";
 
       card.innerHTML = `
-        <h3>${m[2] || "Nom manquant"}</h3>
-        <p>${m[5] || ""} ${m[6] || ""} ${m[7] || ""}</p>
+        <div class="mag-header">
+          <h3>${m[2] || "Nom manquant"}</h3>
+
+          <label class="visit-toggle">
+            <input type="checkbox" ${m[1] ? "checked" : ""} 
+                   onchange="toggleVisite(${i}, this.checked)">
+            <span>Visité</span>
+          </label>
+        </div>
+
+        <p class="adresse">${m[5] || ""} ${m[6] || ""} ${m[7] || ""}</p>
 
         ${
           route
-            ? `<p>📍 ${route.km} km — ⏱ ${route.minutes} min</p>`
-            : `<p>📍 Distance non disponible</p>`
+            ? `<p class="distance">📍 ${route.km} km — ⏱ ${route.minutes} min</p>`
+            : `<p class="distance">📍 Distance non disponible</p>`
         }
 
-        <a href="${wazeLink(lat, lng)}" target="_blank" class="btn-waze">
-          🚗 Waze
-        </a>
+        <div class="actions">
+          <a href="${wazeLink(lat, lng)}" target="_blank" class="btn-waze">
+            🚗 Waze
+          </a>
+
+          <button class="btn-edit" onclick="goEdit('${m[0]}')">
+            ✏️ Modifier
+          </button>
+
+          <button class="btn-delete" onclick="deleteMagasin(${i})">
+            🗑️ Supprimer
+          </button>
+        </div>
       `;
 
       container.appendChild(card);
@@ -110,7 +166,7 @@ async function renderList() {
 }
 
 /***********************************************************
- * NAVIGATION ENTRE PAGES
+ * NAVIGATION
  ***********************************************************/
 function goAdd() {
   location.href = "add-magasin.html";
@@ -122,7 +178,7 @@ function goEdit(code) {
 }
 
 /***********************************************************
- * DECONNEXION
+ * LOGOUT
  ***********************************************************/
 function logout() {
   localStorage.removeItem("session");
@@ -130,6 +186,6 @@ function logout() {
 }
 
 /***********************************************************
- * LANCEMENT AUTOMATIQUE
+ * LANCEMENT
  ***********************************************************/
 loadMagasins();
