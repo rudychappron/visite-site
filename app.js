@@ -1,5 +1,15 @@
 /***************************************************
- * CONFIG — OSRM WORKER VERSION
+ * ANTI DOUBLE-CHARGEMENT
+ ***************************************************/
+if (window.__APP_LOADED__) {
+    console.warn("⚠️ app.js déjà chargé → ignoré !");
+    throw "APP_JS_ALREADY_LOADED";
+}
+window.__APP_LOADED__ = true;
+
+
+/***************************************************
+ * CONFIG
  ***************************************************/
 const API = "https://winter-bar-234b.rudychappron.workers.dev";
 
@@ -7,7 +17,7 @@ window.userLat = null;
 window.userLng = null;
 
 let gpsReady = false;
-let gpsInitDone = false;  // ⬅️ empêche 40 appels
+let gpsInitDone = false;
 
 let sortCol = null;
 let sortAsc = true;
@@ -18,7 +28,7 @@ let typeList = [];
 
 
 /***************************************************
- * NORMALISATION ADRESSE + CACHE
+ * NORMALISATION ADRESSE (avec cache)
  ***************************************************/
 async function normalizeAddress(a, cp, v) {
     const key = a + cp + v;
@@ -45,11 +55,15 @@ async function normalizeAddress(a, cp, v) {
 
 
 /***************************************************
- * GET MAGASINS — Version OSRM
+ * GET MAGASINS — OSRM tri serveur
  ***************************************************/
 async function getMagasins() {
+    if (!gpsReady) return [];
+
+    const url = `${API}/get?lat=${window.userLat}&lng=${window.userLng}`;
+
     try {
-        const res = await fetch(`${API}/get?lat=${window.userLat}&lng=${window.userLng}`);
+        const res = await fetch(url);
         const json = await res.json();
         return json.data || [];
     } catch {
@@ -72,18 +86,17 @@ async function toggleVisite(code, el) {
 
 
 /***************************************************
- * TRI
+ * TRI LOCAL
  ***************************************************/
 function sortBy(col) {
     if (sortCol === col) sortAsc = !sortAsc;
     else { sortCol = col; sortAsc = true; }
-
     renderTable();
 }
 
 
 /***************************************************
- * RECHERCHE + FILTRES
+ * RECHERCHE / FILTRES
  ***************************************************/
 function onSearchChange() { renderTable(); }
 function onFilterChange() { renderTable(); }
@@ -99,23 +112,9 @@ async function renderTable() {
 
     const search = document.getElementById("search").value.toLowerCase();
     const fVisite = document.getElementById("filterVisite").value;
-    const fType = document.getElementById("filterType").value;
+    const fType   = document.getElementById("filterType").value;
 
-    let list = fullMagList.map(r => ({
-        code: r.code,
-        visite: r.visite,
-        nom: r.nom,
-        type: r.type,
-        adresse: r.adresse,
-        cp: r.cp,
-        ville: r.ville,
-        lat: r.lat,
-        lng: r.lng,
-        vol: r.vol,
-        km: r.km,
-        duree: r.duree
-    }));
-
+    let list = fullMagList.map(r => ({ ...r }));
 
     /******** Recherche ********/
     list = list.filter(m =>
@@ -126,16 +125,16 @@ async function renderTable() {
     );
 
     /******** Filtre visite ********/
-    if (fVisite === "visite") list = list.filter(m => m.visite);
-    if (fVisite === "nonvisite") list = list.filter(m => !m.visite);
+    if (fVisite === "visite")     list = list.filter(m => m.visite);
+    if (fVisite === "nonvisite")  list = list.filter(m => !m.visite);
 
     /******** Filtre type ********/
     if (fType !== "all") list = list.filter(m => m.type === fType);
 
     /******** TRI LOCAL ********/
-    if (sortCol === "code") list.sort((a,b)=> sortAsc ? a.code - b.code : b.code - a.code);
-    if (sortCol === "nom") list.sort((a,b)=> sortAsc ? a.nom.localeCompare(b.nom) : b.nom.localeCompare(a.nom));
-    if (sortCol === "type") list.sort((a,b)=> sortAsc ? a.type.localeCompare(b.type) : b.type.localeCompare(a.type));
+    if (sortCol === "code")   list.sort((a,b)=> sortAsc ? a.code - b.code : b.code - a.code);
+    if (sortCol === "nom")    list.sort((a,b)=> sortAsc ? a.nom.localeCompare(b.nom) : b.nom.localeCompare(a.nom));
+    if (sortCol === "type")   list.sort((a,b)=> sortAsc ? a.type.localeCompare(b.type) : b.type.localeCompare(a.type));
     if (sortCol === "visite") list.sort((a,b)=> sortAsc ? a.visite - b.visite : b.visite - a.visite);
 
 
@@ -146,30 +145,20 @@ async function renderTable() {
         const waze = `https://waze.com/ul?ll=${m.lat},${m.lng}&navigate=yes`;
 
         const tr = document.createElement("tr");
-
         tr.innerHTML = `
             <td>${m.code}</td>
-
-            <td><input type="checkbox" ${m.visite ? "checked" : ""} 
-                       onchange="toggleVisite('${m.code}', this)"></td>
-
+            <td><input type="checkbox" ${m.visite ? "checked" : ""} onchange="toggleVisite('${m.code}', this)"></td>
             <td>${m.nom}</td>
             <td>${m.type}</td>
             <td>${fullAdr}</td>
-
-            <td>
-                <a href="${waze}" target="_blank">
-                    <img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg" width="30">
-                </a>
-            </td>
-
-            <td>${m.vol ? m.vol.toFixed(1) + " km" : "-" }</td>
+            <td><a href="${waze}" target="_blank">
+                <img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg" width="30">
+            </a></td>
+            <td>${m.vol ? m.vol.toFixed(1)+" km" : "-"}</td>
             <td>${m.km || "-"}</td>
             <td>${m.duree || "-"}</td>
-
             <td><button onclick="editMagasin('${m.code}')">✏️</button></td>
         `;
-
         tbody.appendChild(tr);
     }
 }
@@ -197,8 +186,8 @@ async function initMagasins() {
         duree: r[15]
     }));
 
-    /**** Types dynamiques ****/
     typeList = [...new Set(fullMagList.map(m => m.type).filter(Boolean))];
+
     const sel = document.getElementById("filterType");
     sel.innerHTML = `<option value="all">Tous les types</option>`;
     typeList.sort().forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
@@ -208,7 +197,7 @@ async function initMagasins() {
 
 
 /***************************************************
- * GPS — ne recharge qu'une seule fois !
+ * GPS — une seule fois
  ***************************************************/
 navigator.geolocation.watchPosition(
     pos => {
@@ -217,8 +206,8 @@ navigator.geolocation.watchPosition(
         gpsReady = true;
 
         if (!gpsInitDone) {
-            gpsInitDone = true;     // ⬅️ empêche appels multiples
-            initMagasins();         // ⬅️ appelé UNE SEULE FOIS
+            gpsInitDone = true;
+            initMagasins();
         }
     },
     err => console.warn("GPS refusé:", err),
@@ -230,6 +219,6 @@ navigator.geolocation.watchPosition(
  * NAVIGATION
  ***************************************************/
 function editMagasin(code) { location.href = `edit-magasin.html?code=${code}`; }
-function goAdd() { location.href = "add-magasin.html"; }
-function clearCache() { addressCache = {}; alert("Cache vidé ✔"); }
+function goAdd()          { location.href = "add-magasin.html"; }
+function clearCache()     { addressCache = {}; alert("Cache vidé ✔"); }
 
