@@ -12,6 +12,9 @@ let sortAsc = true;
 
 let addressCache = {};
 
+let fullMagList = [];   // RAW depuis Sheets
+let typeList = [];      // Types dynamiques
+
 
 // =====================================
 // HAVERSINE
@@ -34,14 +37,14 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 
 // =====================================
-// ORS DISTANCE + TEMPS
+// ORS ROUTE DISTANCE
 // =====================================
 let lastORS = 0;
 
 async function getRouteDistance(lat1, lng1, lat2, lng2) {
 
     const now = Date.now();
-    if (now - lastORS < 2000) return null; // 1 calcul / 2 sec
+    if (now - lastORS < 1200) return null;
     lastORS = now;
 
     try {
@@ -79,6 +82,7 @@ async function getRouteDistance(lat1, lng1, lat2, lng2) {
 }
 
 
+
 // =====================================
 // NORMALISATION ADRESSE + CACHE
 // =====================================
@@ -108,6 +112,7 @@ async function normalizeAddress(a, cp, v) {
 }
 
 
+
 // =====================================
 // GET MAGASINS
 // =====================================
@@ -122,6 +127,7 @@ async function getMagasins() {
 }
 
 
+
 // =====================================
 // SAUVEGARDE VISITE
 // =====================================
@@ -134,11 +140,14 @@ async function toggleVisite(code, el) {
             fait: el.checked
         })
     });
+
+    loadMagasins();
 }
 
 
+
 // =====================================
-// TRI PAR COLONNE
+// TRI
 // =====================================
 function sortBy(col) {
     if (sortCol === col) sortAsc = !sortAsc;
@@ -148,30 +157,58 @@ function sortBy(col) {
 }
 
 
+
+// =====================================
+// FILTRES + RECHERCHE
+// =====================================
+function onSearchChange() { loadMagasins(); }
+function onFilterChange() { loadMagasins(); }
+
+
 // =====================================
 // AFFICHAGE TABLEAU
 // =====================================
 async function loadMagasins() {
 
-    const data = await getMagasins();
     const tbody = document.querySelector("tbody");
     tbody.innerHTML = "";
 
-    let list = data.slice(1).map(r => ({
-        code: r[0],
-        visite: (r[1] === true || r[1] === "TRUE"),
-        nom: r[2],
-        type: r[3],
-        adresse: r[5],
-        cp: r[6],
-        ville: r[7],
-        lat: Number(r[11]),
-        lng: Number(r[12]),
-        dist: (window.userLat ? haversine(window.userLat, window.userLng, r[11], r[12]) : 99999)
+    const search = document.getElementById("search").value.toLowerCase();
+    const fVisite = document.getElementById("filterVisite").value;
+    const fType = document.getElementById("filterType").value;
+
+    let list = fullMagList.map(r => ({
+        code: r.code,
+        visite: r.visite,
+        nom: r.nom,
+        type: r.type,
+        adresse: r.adresse,
+        cp: r.cp,
+        ville: r.ville,
+        lat: r.lat,
+        lng: r.lng,
+        dist: (window.userLat ? haversine(window.userLat, window.userLng, r.lat, r.lng) : 99999)
     }));
 
 
-    // TRI
+    // 🔍 FILTRE RECHERCHE
+    list = list.filter(m =>
+        m.code.toString().includes(search) ||
+        m.nom.toLowerCase().includes(search) ||
+        m.type.toLowerCase().includes(search) ||
+        m.ville.toLowerCase().includes(search)
+    );
+
+
+    // 🟦 FILTRE VISITE
+    if (fVisite === "visite") list = list.filter(m => m.visite);
+    if (fVisite === "nonvisite") list = list.filter(m => !m.visite);
+
+    // 🟪 FILTRE TYPE
+    if (fType !== "all") list = list.filter(m => m.type === fType);
+
+
+    // 🔽 TRI
     if (sortCol === "code") list.sort((a,b)=> sortAsc ? a.code - b.code : b.code - a.code);
     if (sortCol === "nom") list.sort((a,b)=> sortAsc ? a.nom.localeCompare(b.nom) : b.nom.localeCompare(a.nom));
     if (sortCol === "type") list.sort((a,b)=> sortAsc ? a.type.localeCompare(b.type) : b.type.localeCompare(a.type));
@@ -179,7 +216,7 @@ async function loadMagasins() {
     if (sortCol === "km") list.sort((a,b)=> sortAsc ? a.dist - b.dist : b.dist - a.dist);
 
 
-    // AFFICHAGE LIGNES
+    // 🔁 LIGNES
     for (const m of list) {
 
         let kmTxt = "-";
@@ -191,19 +228,18 @@ async function loadMagasins() {
         }
 
         const fullAdr = await normalizeAddress(m.adresse, m.cp, m.ville);
-
         const waze = `https://waze.com/ul?ll=${m.lat},${m.lng}&navigate=yes`;
 
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
-            <td onclick="sortBy('code')">${m.code}</td>
+            <td>${m.code}</td>
             <td><input type="checkbox" ${m.visite ? "checked" : ""} onchange="toggleVisite('${m.code}', this)"></td>
-            <td onclick="sortBy('nom')">${m.nom}</td>
-            <td onclick="sortBy('type')">${m.type}</td>
+            <td>${m.nom}</td>
+            <td>${m.type}</td>
             <td>${fullAdr}</td>
             <td><a href="${waze}" target="_blank"><img src="https://files.brandlogos.net/svg/KWGOdcgoGJ/waze-app-icon-logo-brandlogos.net_izn3bglse.svg" width="30"></a></td>
-            <td onclick="sortBy('km')">${kmTxt}</td>
+            <td>${kmTxt}</td>
             <td>${tempsTxt}</td>
             <td><button onclick="editMagasin('${m.code}')">✏️</button></td>
         `;
@@ -211,6 +247,43 @@ async function loadMagasins() {
         tbody.appendChild(tr);
     }
 }
+
+
+
+// =====================================
+// CHARGEMENT INITIAL + TYPES DYNAMIQUES
+// =====================================
+async function initMagasins() {
+
+    const raw = await getMagasins();
+
+    // Convert RAW
+    fullMagList = raw.slice(1).map(r => ({
+        code: r[0],
+        visite: (r[1] === true || r[1] === "TRUE"),
+        nom: r[2],
+        type: r[3],
+        adresse: r[5],
+        cp: r[6],
+        ville: r[7],
+        lat: Number(r[11]),
+        lng: Number(r[12])
+    }));
+
+
+    // 🔥 TYPES DYNAMIQUES
+    typeList = [...new Set(fullMagList.map(m => m.type).filter(t => t && t.trim() !== ""))];
+
+    const sel = document.getElementById("filterType");
+    sel.innerHTML = `<option value="all">Tous les types</option>`;
+
+    typeList.sort().forEach(t => {
+        sel.innerHTML += `<option value="${t}">${t}</option>`;
+    });
+
+    loadMagasins();
+}
+
 
 
 // =====================================
@@ -234,6 +307,14 @@ navigator.geolocation.watchPosition(
 function editMagasin(code) { location.href = `edit-magasin.html?code=${code}`; }
 function goAdd() { location.href = "add-magasin.html"; }
 
+// Cache
+function clearCache() {
+    addressCache = {};
+    alert("Cache vidé ✔");
+}
 
+
+// =====================================
 // START
-loadMagasins();
+// =====================================
+initMagasins();
