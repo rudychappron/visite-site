@@ -1,5 +1,5 @@
 /***********************************************************
- * CONFIG
+ * CONFIGURATION
  ***********************************************************/
 const HERE_API_KEY = "5TuJy6GHPhdQDvXGdFa8Hq984DX0NsSGvl3dRZjx0uo";
 const ALLOWED_ORIGIN = "https://rudychappron.github.io";
@@ -12,7 +12,8 @@ const APPS_SCRIPT_URL =
  ***********************************************************/
 async function loadMagasins() {
   try {
-    const url = `${APPS_SCRIPT_URL}?origin=${encodeURIComponent(ALLOWED_ORIGIN)}`;
+    const url =
+      `${APPS_SCRIPT_URL}?action=get&origin=${encodeURIComponent(ALLOWED_ORIGIN)}`;
 
     const res = await fetch(url);
     const json = await res.json();
@@ -22,9 +23,7 @@ async function loadMagasins() {
       return;
     }
 
-    window.header = json.data[0];
-    window.magasins = json.data.slice(1);
-
+    window.magasins = json.data.slice(1); // on retire l’en-tête
     initFilters();
     renderList();
 
@@ -40,7 +39,7 @@ async function loadMagasins() {
 async function getRoute(lat1, lng1, lat2, lng2) {
   if (!lat2 || !lng2) return null;
 
-  const url = 
+  const url =
     `https://router.hereapi.com/v8/routes?transportMode=car` +
     `&origin=${lat1},${lng1}` +
     `&destination=${lat2},${lng2}` +
@@ -70,15 +69,18 @@ function wazeLink(lat, lng) {
  * METTRE À JOUR "VISITÉ"
  ***********************************************************/
 async function toggleVisite(index, checked) {
-  let row = window.magasins[index];
-  row[1] = checked ? true : false;
+
+  // sécurité
+  if (!window.magasins[index]) return;
+
+  window.magasins[index][1] = checked;
 
   await fetch(APPS_SCRIPT_URL, {
     method: "POST",
     body: JSON.stringify({
       action: "update",
       index: index + 1,
-      row
+      row: window.magasins[index]
     }),
   });
 
@@ -148,9 +150,9 @@ function applyFilters(list) {
  * AFFICHAGE DES CARTES
  ***********************************************************/
 async function renderList() {
+
   const container = document.getElementById("list");
   if (!container) return;
-
   container.innerHTML = "Chargement…";
 
   navigator.geolocation.getCurrentPosition(async pos => {
@@ -162,9 +164,9 @@ async function renderList() {
 
     const filtered = applyFilters([...window.magasins]);
 
-    filtered.forEach(async m => {
+    filtered.forEach(async (m) => {
 
-      const index = window.magasins.indexOf(m);
+      const index = window.magasins.indexOf(m); // correct
 
       const lat = m[11];
       const lng = m[12];
@@ -172,15 +174,15 @@ async function renderList() {
       let route = null;
       if (lat && lng) route = await getRoute(latUser, lngUser, lat, lng);
 
-      const div = document.createElement("div");
-      div.className = "magasin-card";
+      const card = document.createElement("div");
+      card.className = "magasin-card";
 
-      div.innerHTML = `
+      card.innerHTML = `
         <div class="mag-header">
           <h3>${m[2] || "Nom manquant"}</h3>
 
           <label class="visit-toggle">
-            <input type="checkbox" ${m[1] ? "checked" : ""} 
+            <input type="checkbox" ${m[1] ? "checked" : ""}
                    onchange="toggleVisite(${index}, this.checked)">
             <span>Visité</span>
           </label>
@@ -188,29 +190,21 @@ async function renderList() {
 
         <p class="adresse">${m[5] || ""} ${m[6] || ""} ${m[7] || ""}</p>
 
-        ${
-          route
-          ? `<p class="distance">📍 ${route.km} km — ⏱ ${route.minutes} min</p>`
-          : `<p class="distance">📍 Distance non disponible</p>`
+        ${route ?
+          `<p class="distance">📍 ${route.km} km — ⏱ ${route.minutes} min</p>` :
+          `<p class="distance">📍 Distance non disponible</p>`
         }
 
         <div class="actions">
-
-          <a href="${wazeLink(lat, lng)}" target="_blank" class="btn-waze">
-            Waze
-          </a>
-
+          <a href="${wazeLink(lat, lng)}" target="_blank" class="btn-waze">Waze</a>
           <button class="btn-edit" onclick="goEdit('${m[0]}')">Modifier</button>
-
-          <button class="btn-delete" onclick="deleteMagasin(${index})">
-            Supprimer
-          </button>
-
+          <button class="btn-delete" onclick="deleteMagasin(${index})">Supprimer</button>
         </div>
       `;
 
-      container.appendChild(div);
+      container.appendChild(card);
     });
+
   });
 }
 
