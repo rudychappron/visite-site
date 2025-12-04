@@ -10,24 +10,34 @@ const APPS_SCRIPT_URL =
 /***********************************************************
  * VARIABLES
  ***********************************************************/
-let sortDistance = "asc"; // tri par distance
+let sortDistance = "asc";
 
 /***********************************************************
- * WAZE ULTRA PRÉCIS (Adresse → Fallback GPS)
+ * WAZE ULTRA PRÉCIS (Adresse normalisée → fallback GPS)
  ***********************************************************/
 function openWaze(m) {
-  // Adresse complète normalisée (adresse, CP, ville)
-  const adr = `${m.data[5]}, ${m.data[6]} ${m.data[7]}, France`
-    .trim()
-    .replaceAll("  ", " ");
 
+  // Nettoyage agressif pour éviter les erreurs Waze
+  const clean = txt =>
+    (txt || "")
+      .normalize("NFKD")               // supprime accents invisibles
+      .replace(/[^\w\s\-\,]/g, "")     // enlève caractères bizarres
+      .replace(/\s{2,}/g, " ")         // supprime doubles espaces
+      .trim();
+
+  const rue = clean(m.data[5]);   // Adresse (numéro + rue)
+  const cp = clean(m.data[6]);
+  const ville = clean(m.data[7]);
+
+  // Adresse normalisée
+  const adr = `${rue}, ${cp} ${ville}, France`;
   const encoded = encodeURIComponent(adr);
 
-  // Par défaut : utilisation de l'adresse (précision max)
+  // Adresse = priorité car plus précise
   let url = `https://waze.com/ul?q=${encoded}&navigate=yes`;
 
-  // Si l’adresse est vide → fallback sur GPS
-  if (!m.data[5] || m.data[5].trim() === "") {
+  // Si adresse absente → fallback GPS
+  if (!rue || rue.length < 3) {
     const lat = m.data[11];
     const lng = m.data[12];
 
@@ -207,7 +217,7 @@ async function renderList() {
 
     let filtered = applyFilters([...window.magasins]);
 
-    // Calcul distances (HERE API)
+    // Distance routing via HERE API
     for (const m of filtered) {
       const lat = m.data[11];
       const lng = m.data[12];
