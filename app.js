@@ -10,10 +10,10 @@ const APPS_SCRIPT_URL =
 /***********************************************************
  * VARIABLES
  ***********************************************************/
-let sortDistance = "asc";
+let sortDistance = "asc"; // tri par défaut → du plus proche au plus loin
 
 /***********************************************************
- * FORMAT TEMPS (minutes → "X min" ou "XhYY")
+ * FORMAT TEMPS
  ***********************************************************/
 function formatTime(min) {
   if (min < 60) return `${min} min`;
@@ -28,12 +28,12 @@ function formatTime(min) {
 }
 
 /***********************************************************
- * WAZE ULTRA PRÉCIS (Adresse → fallback GPS)
+ * WAZE ULTRA PRÉCIS
  ***********************************************************/
 function openWaze(m) {
 
   const clean = txt =>
-    (txt || "")
+    String(txt || "")       // ⭐ conversion STRING obligatoire
       .normalize("NFKD")
       .replace(/[^\w\s\-\,]/g, "")
       .replace(/\s{2,}/g, " ")
@@ -46,8 +46,10 @@ function openWaze(m) {
   const adr = `${rue}, ${cp} ${ville}, France`;
   const encoded = encodeURIComponent(adr);
 
+  // adresse → priorité
   let url = `https://waze.com/ul?q=${encoded}&navigate=yes`;
 
+  // fallback GPS si adresse vide
   if (!rue || rue.length < 3) {
     const lat = m.data[11];
     const lng = m.data[12];
@@ -134,7 +136,7 @@ async function deleteMagasin(realIndex) {
 }
 
 /***********************************************************
- * API ROUTE HERE (Distance + Temps)
+ * API ROUTE HERE
  ***********************************************************/
 async function getRoute(lat1, lng1, lat2, lng2) {
   if (!lat2 || !lng2) return null;
@@ -212,7 +214,7 @@ function copyCode(code) {
 }
 
 /***********************************************************
- * AFFICHAGE (liste magasins)
+ * AFFICHAGE LISTE
  ***********************************************************/
 async function renderList() {
 
