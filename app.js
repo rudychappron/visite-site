@@ -8,6 +8,14 @@ const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxamWQ5gx9ofSAwYMttyOjsju_XSdDgHdTBFtksLkXPH50WPmqp0AYHZAIq0o_KR4ZMyQ/exec";
 
 /***********************************************************
+ * VARIABLES GLOBALES
+ ***********************************************************/
+let sortDistance = null; 
+// null = pas de tri
+// "asc" = plus proche → plus loin
+// "desc" = plus loin → plus proche
+
+/***********************************************************
  * CHARGEMENT MAGASINS
  ***********************************************************/
 async function loadMagasins() {
@@ -21,10 +29,10 @@ async function loadMagasins() {
       return;
     }
 
-    // ⭐ ON GARDE AUSSI L'INDEX D'ORIGINE
     window.magasins = json.data.slice(1).map((row, idx) => ({
-      rowIndex: idx,   // index réel de la ligne dans Sheets (0-based)
-      data: row
+      rowIndex: idx,
+      data: row,
+      distanceKm: null // ⭐ nouvel attribut
     }));
 
     initFilters();
@@ -37,34 +45,27 @@ async function loadMagasins() {
 }
 
 /***********************************************************
- * UPDATE VISITÉ – 100% FIABLE
+ * UPDATE VISITÉ
  ***********************************************************/
 async function toggleVisite(index, checked) {
 
   const mag = window.magasins[index];
-
-  // sécurité
   if (!mag) return;
 
-  mag.data[1] = checked;  // colonne B "fait"
-
-  console.log("Envoi update avec : ", {
-    action: "update",
-    index: mag.rowIndex,    // ⭐ UTILISATION DU BON INDEX
-    row: mag.data
-  });
+  mag.data[1] = checked;
 
   await fetch(APPS_SCRIPT_URL + "?origin=" + ALLOWED_ORIGIN, {
     method: "POST",
     body: JSON.stringify({
       action: "update",
-      index: mag.rowIndex,   // ⭐ le seul index correct !
+      index: mag.rowIndex,
       row: mag.data
     })
   });
 
   console.log("Visité mis à jour !");
 }
+
 /***********************************************************
  * SUPPRESSION
  ***********************************************************/
@@ -113,10 +114,24 @@ async function getRoute(lat1, lng1, lat2, lng2) {
 }
 
 /***********************************************************
- * WAZE
+ * TRI PAR DISTANCE
  ***********************************************************/
-function wazeLink(lat, lng) {
-  return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+function toggleSortDistance() {
+
+  if (sortDistance === null) sortDistance = "asc";
+  else if (sortDistance === "asc") sortDistance = "desc";
+  else sortDistance = null;
+
+  const btn = document.getElementById("sortDistanceBtn");
+
+  if (sortDistance === "asc")
+    btn.innerHTML = `<i class="fa-solid fa-arrow-down-short-wide"></i> Distance`;
+  else if (sortDistance === "desc")
+    btn.innerHTML = `<i class="fa-solid fa-arrow-up-short-wide"></i> Distance`;
+  else
+    btn.innerHTML = `<i class="fa-solid fa-arrows-up-down"></i> Distance`;
+
+  renderList();
 }
 
 /***********************************************************
@@ -144,14 +159,13 @@ function applyFilters(list) {
 
   if (fVisite === "visite") list = list.filter(m => m.data[1] === true);
   if (fVisite === "nonvisite") list = list.filter(m => m.data[1] === false);
-  if (fType !== "all")
-    list = list.filter(m => m.data[3] === fType);
+  if (fType !== "all") list = list.filter(m => m.data[3] === fType);
 
   return list;
 }
 
 /***********************************************************
- * AFFICHAGE LISTE
+ * AFFICHAGE LISTE + TRI PAR DISTANCE
  ***********************************************************/
 async function renderList() {
 
@@ -165,21 +179,50 @@ async function renderList() {
 
     container.innerHTML = "";
 
-    const filtered = applyFilters([...window.magasins]);
+    // appliquer les filtres
+    let filtered = applyFilters([...window.magasins]);
 
+    // ⭐ Calcul distance + stockage dans m.distanceKm
+    for (const m of filtered) {
+      const lat = m.data[11];
+      const lng = m.data[12];
+
+      if (lat && lng) {
+        const route = await getRoute(latUser, lngUser, lat, lng);
+        m.distanceKm = route ? parseFloat(route.km) : null;
+        m.routeInfo = route;
+      } else {
+        m.distanceKm = null;
+        m.routeInfo = null;
+      }
+    }
+
+    // ⭐ TRI SI ACTIVÉ
+    if (sortDistance === "asc") {
+      filtered.sort((a, b) => {
+        if (a.distanceKm == null) return 1;
+        if (b.distanceKm == null) return -1;
+        return a.distanceKm - b.distanceKm;
+      });
+    }
+
+    if (sortDistance === "desc") {
+      filtered.sort((a, b) => {
+        if (a.distanceKm == null) return -1;
+        if (b.distanceKm == null) return 1;
+        return b.distanceKm - a.distanceKm;
+      });
+    }
+
+    // ⭐ AFFICHAGE
     for (const m of filtered) {
 
-      const index = window.magasins.indexOf(m);
-      const row = m.data;  // ⭐ ON PREND LES DONNÉES
-
-      const lat = row[11];
-      const lng = row[12];
-
-      let route = null;
-      if (lat && lng) route = await getRoute(latUser, lngUser, lat, lng);
+      const row = m.data;
 
       const card = document.createElement("div");
       card.className = "magasin-card";
+
+      const index = window.magasins.indexOf(m);
 
       card.innerHTML = `
         <div class="mag-header">
@@ -194,12 +237,14 @@ async function renderList() {
 
         <p class="adresse">${row[5]} ${row[6]} ${row[7]}</p>
 
-        ${route ?
-          `<p class="distance">📍 ${route.km} km | ⏱ ${route.minutes} min</p>` :
-          `<p class="distance">📍 Distance inconnue</p>`}
+        ${
+          m.routeInfo
+          ? `<p class="distance">📍 ${m.routeInfo.km} km | ⏱ ${m.routeInfo.minutes} min</p>`
+          : `<p class="distance">📍 Distance inconnue</p>`
+        }
 
         <div class="actions">
-          <a href="${wazeLink(lat, lng)}" target="_blank" class="btn-waze">Waze</a>
+          <a href="${wazeLink(row[11], row[12])}" target="_blank" class="btn-waze">Waze</a>
 
           <button class="btn-edit" onclick="goEdit('${row[0]}')">
             Modifier
