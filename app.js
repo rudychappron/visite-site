@@ -28,7 +28,7 @@ function formatTime(min) {
 }
 
 /***********************************************************
- * WAZE ULTRA PRÉCIS (Adresse normalisée → fallback GPS)
+ * WAZE ULTRA PRÉCIS (Adresse → fallback GPS)
  ***********************************************************/
 function openWaze(m) {
 
@@ -212,7 +212,7 @@ function copyCode(code) {
 }
 
 /***********************************************************
- * AFFICHAGE
+ * AFFICHAGE (liste magasins)
  ***********************************************************/
 async function renderList() {
 
@@ -282,7 +282,7 @@ async function renderList() {
 
         <div class="actions">
 
-          <button class="btn-waze" onclick='openWaze(${JSON.stringify(m)})'>
+          <button class="btn-waze" onclick="openWaze(window.magasins[${index}])">
             Waze
           </button>
 
