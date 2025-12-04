@@ -10,7 +10,8 @@ const APPS_SCRIPT_URL =
 /***********************************************************
  * VARIABLES
  ***********************************************************/
-let sortDistance = "none"; // "none" | "asc" | "desc"
+// ⭐ Tri par défaut du plus proche → plus loin
+let sortDistance = "asc";
 
 /***********************************************************
  * CHARGEMENT MAGASINS
@@ -59,8 +60,6 @@ async function toggleVisite(index, checked) {
       row: mag.data
     })
   });
-
-  console.log("Visité mis à jour !");
 }
 
 /***********************************************************
@@ -88,7 +87,6 @@ async function deleteMagasin(realIndex) {
  * API ROUTE HERE
  ***********************************************************/
 async function getRoute(lat1, lng1, lat2, lng2) {
-
   if (!lat2 || !lng2) return null;
 
   const url =
@@ -101,10 +99,7 @@ async function getRoute(lat1, lng1, lat2, lng2) {
     const res = await fetch(url);
     const json = await res.json();
 
-    // ⭐⭐ sécurité anti-bug : si structure manquante, on retourne null
-    if (!json || !json.routes || !json.routes[0] || !json.routes[0].sections || !json.routes[0].sections[0]) {
-      return null;
-    }
+    if (!json || !json.routes || !json.routes[0]?.sections?.[0]) return null;
 
     const s = json.routes[0].sections[0].summary;
 
@@ -114,14 +109,12 @@ async function getRoute(lat1, lng1, lat2, lng2) {
     };
 
   } catch (e) {
-    console.warn("Erreur HERE API :", e);
     return null;
   }
 }
 
-
 /***********************************************************
- * CHANGEMENT TRI DISTANCE (menu déroulant)
+ * MENU TRI DISTANCE
  ***********************************************************/
 function changeSortDistance() {
   sortDistance = document.getElementById("sortDistanceSelect").value;
@@ -161,7 +154,15 @@ function applyFilters(list) {
 }
 
 /***********************************************************
- * AFFICHAGE LISTE + TRI PAR DISTANCE
+ * COPIE DU CODE MAGASIN
+ ***********************************************************/
+function copyCode(code) {
+  navigator.clipboard.writeText(code);
+  alert("Code magasin copié : " + code);
+}
+
+/***********************************************************
+ * AFFICHAGE + TRI
  ***********************************************************/
 async function renderList() {
 
@@ -177,7 +178,7 @@ async function renderList() {
 
     let filtered = applyFilters([...window.magasins]);
 
-    // Calcul distance + stockage
+    // Calcul de distance
     for (const m of filtered) {
       const lat = m.data[11];
       const lng = m.data[12];
@@ -188,25 +189,15 @@ async function renderList() {
         m.routeInfo = route;
       } else {
         m.distanceKm = null;
-        m.routeInfo = null;
       }
     }
 
     // TRI
     if (sortDistance === "asc") {
-      filtered.sort((a, b) => {
-        if (a.distanceKm == null) return 1;
-        if (b.distanceKm == null) return -1;
-        return a.distanceKm - b.distanceKm;
-      });
+      filtered.sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
     }
-
     if (sortDistance === "desc") {
-      filtered.sort((a, b) => {
-        if (a.distanceKm == null) return -1;
-        if (b.distanceKm == null) return 1;
-        return b.distanceKm - a.distanceKm;
-      });
+      filtered.sort((a, b) => (b.distanceKm ?? -1) - (a.distanceKm ?? -1));
     }
 
     // AFFICHAGE
@@ -220,7 +211,13 @@ async function renderList() {
 
       card.innerHTML = `
         <div class="mag-header">
-          <h3>${row[2] || "Nom manquant"}</h3>
+
+          <h3>
+            ${row[2] || "Nom manquant"}  
+            <span class="code-magasin" onclick="copyCode('${row[0]}')">
+              (#${row[0]})
+            </span>
+          </h3>
 
           <label class="visit-toggle">
             <input type="checkbox" ${row[1] ? "checked" : ""} 
@@ -259,9 +256,7 @@ async function renderList() {
 /***********************************************************
  * NAVIGATION
  ***********************************************************/
-function goAdd() {
-  location.href = "add-magasin.html";
-}
+function goAdd() { location.href = "add-magasin.html"; }
 function goEdit(code) {
   localStorage.setItem("editCode", code);
   location.href = "edit-magasin.html";
