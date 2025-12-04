@@ -88,6 +88,7 @@ async function deleteMagasin(realIndex) {
  * API ROUTE HERE
  ***********************************************************/
 async function getRoute(lat1, lng1, lat2, lng2) {
+
   if (!lat2 || !lng2) return null;
 
   const url =
@@ -96,18 +97,28 @@ async function getRoute(lat1, lng1, lat2, lng2) {
     `&destination=${lat2},${lng2}` +
     `&return=summary&apikey=${HERE_API_KEY}`;
 
-  const res = await fetch(url);
-  const json = await res.json();
+  try {
+    const res = await fetch(url);
+    const json = await res.json();
 
-  if (!json.routes) return null;
+    // ⭐⭐ sécurité anti-bug : si structure manquante, on retourne null
+    if (!json || !json.routes || !json.routes[0] || !json.routes[0].sections || !json.routes[0].sections[0]) {
+      return null;
+    }
 
-  const s = json.routes[0].sections[0].summary;
+    const s = json.routes[0].sections[0].summary;
 
-  return {
-    km: (s.length / 1000).toFixed(1),
-    minutes: Math.round(s.duration / 60)
-  };
+    return {
+      km: (s.length / 1000).toFixed(1),
+      minutes: Math.round(s.duration / 60)
+    };
+
+  } catch (e) {
+    console.warn("Erreur HERE API :", e);
+    return null;
+  }
 }
+
 
 /***********************************************************
  * CHANGEMENT TRI DISTANCE (menu déroulant)
