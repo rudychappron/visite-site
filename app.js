@@ -10,8 +10,37 @@ const APPS_SCRIPT_URL =
 /***********************************************************
  * VARIABLES
  ***********************************************************/
-// ⭐ Tri par défaut du plus proche → plus loin
-let sortDistance = "asc";
+let sortDistance = "asc"; // tri par distance
+
+/***********************************************************
+ * WAZE ULTRA PRÉCIS (Adresse → Fallback GPS)
+ ***********************************************************/
+function openWaze(m) {
+  // Adresse complète normalisée (adresse, CP, ville)
+  const adr = `${m.data[5]}, ${m.data[6]} ${m.data[7]}, France`
+    .trim()
+    .replaceAll("  ", " ");
+
+  const encoded = encodeURIComponent(adr);
+
+  // Par défaut : utilisation de l'adresse (précision max)
+  let url = `https://waze.com/ul?q=${encoded}&navigate=yes`;
+
+  // Si l’adresse est vide → fallback sur GPS
+  if (!m.data[5] || m.data[5].trim() === "") {
+    const lat = m.data[11];
+    const lng = m.data[12];
+
+    if (lat && lng) {
+      url = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+    } else {
+      alert("Aucune adresse ou coordonnée disponible.");
+      return;
+    }
+  }
+
+  window.open(url, "_blank");
+}
 
 /***********************************************************
  * CHARGEMENT MAGASINS
@@ -31,7 +60,7 @@ async function loadMagasins() {
       rowIndex: idx,
       data: row,
       distanceKm: null,
-      routeInfo: null
+      routeInfo: null,
     }));
 
     initFilters();
@@ -57,8 +86,8 @@ async function toggleVisite(index, checked) {
     body: JSON.stringify({
       action: "update",
       index: mag.rowIndex,
-      row: mag.data
-    })
+      row: mag.data,
+    }),
   });
 }
 
@@ -75,8 +104,8 @@ async function deleteMagasin(realIndex) {
     body: JSON.stringify({
       action: "delete",
       index: mg.rowIndex,
-      origin: ALLOWED_ORIGIN
-    })
+      origin: ALLOWED_ORIGIN,
+    }),
   });
 
   window.magasins.splice(realIndex, 1);
@@ -105,7 +134,7 @@ async function getRoute(lat1, lng1, lat2, lng2) {
 
     return {
       km: (s.length / 1000).toFixed(1),
-      minutes: Math.round(s.duration / 60)
+      minutes: Math.round(s.duration / 60),
     };
 
   } catch (e) {
@@ -154,7 +183,7 @@ function applyFilters(list) {
 }
 
 /***********************************************************
- * COPIE DU CODE MAGASIN
+ * COPIE CODE MAGASIN
  ***********************************************************/
 function copyCode(code) {
   navigator.clipboard.writeText(code);
@@ -178,7 +207,7 @@ async function renderList() {
 
     let filtered = applyFilters([...window.magasins]);
 
-    // Calcul de distance
+    // Calcul distances (HERE API)
     for (const m of filtered) {
       const lat = m.data[11];
       const lng = m.data[12];
@@ -211,7 +240,6 @@ async function renderList() {
 
       card.innerHTML = `
         <div class="mag-header">
-
           <h3>
             ${row[2] || "Nom manquant"}  
             <span class="code-magasin" onclick="copyCode('${row[0]}')">
@@ -235,8 +263,10 @@ async function renderList() {
         }
 
         <div class="actions">
-          <a href="https://waze.com/ul?ll=${row[11]},${row[12]}&navigate=yes"
-             target="_blank" class="btn-waze">Waze</a>
+
+          <button class="btn-waze" onclick="openWaze(m)">
+            Waze
+          </button>
 
           <button class="btn-edit" onclick="goEdit('${row[0]}')">
             Modifier
