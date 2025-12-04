@@ -22,6 +22,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     </button>
 </header>
 
+<!-- BARRE OUTILS -->
 <div class="toolbar">
 
     <input id="search" type="text" placeholder="🔎 Rechercher…" oninput="renderList()">
@@ -36,10 +37,12 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
         <option value="all">Tous les types</option>
     </select>
 
-    <!-- ⭐ TRI DISTANCE (NE PLANTE PAS MÊME SI PAS ENCORE ACTIVÉ) -->
-    <button id="sortDistanceBtn" class="btn-primary" onclick="toggleSortDistance()">
-        <i class="fa-solid fa-arrows-up-down"></i> Distance
-    </button>
+    <!-- ⭐ NOUVEAU TRI PAR DISTANCE -->
+    <select id="sortDistanceSelect" onchange="changeSortDistance()">
+        <option value="none">Tri distance : Aucun</option>
+        <option value="asc">+ proche → + loin</option>
+        <option value="desc">+ loin → + proche</option>
+    </select>
 
     <button class="btn-primary" onclick="goAdd()">
         <i class="fa-solid fa-plus"></i> Ajouter
@@ -51,6 +54,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
 
 </div>
 
+<!-- LISTE MAGASINS -->
 <div id="list" class="magasins-list"></div>
 
 <script src="auth.js"></script>
