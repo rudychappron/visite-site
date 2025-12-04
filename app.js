@@ -32,7 +32,8 @@ async function loadMagasins() {
     window.magasins = json.data.slice(1).map((row, idx) => ({
       rowIndex: idx,
       data: row,
-      distanceKm: null // ⭐ nouvel attribut
+      distanceKm: null, 
+      routeInfo: null
     }));
 
     initFilters();
@@ -47,9 +48,9 @@ async function loadMagasins() {
 /***********************************************************
  * UPDATE VISITÉ
  ***********************************************************/
-async function toggleVisite(index, checked) {
+async function toggleVisite(realIndex, checked) {
 
-  const mag = window.magasins[index];
+  const mag = window.magasins[realIndex];
   if (!mag) return;
 
   mag.data[1] = checked;
@@ -165,7 +166,7 @@ function applyFilters(list) {
 }
 
 /***********************************************************
- * AFFICHAGE LISTE + TRI PAR DISTANCE
+ * AFFICHAGE LISTE + TRI DISTANCE
  ***********************************************************/
 async function renderList() {
 
@@ -179,10 +180,9 @@ async function renderList() {
 
     container.innerHTML = "";
 
-    // appliquer les filtres
     let filtered = applyFilters([...window.magasins]);
 
-    // ⭐ Calcul distance + stockage dans m.distanceKm
+    // CALCUL DISTANCE
     for (const m of filtered) {
       const lat = m.data[11];
       const lng = m.data[12];
@@ -197,7 +197,7 @@ async function renderList() {
       }
     }
 
-    // ⭐ TRI SI ACTIVÉ
+    // TRI
     if (sortDistance === "asc") {
       filtered.sort((a, b) => {
         if (a.distanceKm == null) return 1;
@@ -214,15 +214,14 @@ async function renderList() {
       });
     }
 
-    // ⭐ AFFICHAGE
+    // AFFICHAGE
     for (const m of filtered) {
 
       const row = m.data;
+      const realIndex = window.magasins.indexOf(m);
 
       const card = document.createElement("div");
       card.className = "magasin-card";
-
-      const index = window.magasins.indexOf(m);
 
       card.innerHTML = `
         <div class="mag-header">
@@ -230,7 +229,7 @@ async function renderList() {
 
           <label class="visit-toggle">
             <input type="checkbox" ${row[1] ? "checked" : ""} 
-                   onchange="toggleVisite(${index}, this.checked)">
+                   onchange="toggleVisite(${realIndex}, this.checked)">
             <span>Visité</span>
           </label>
         </div>
@@ -250,7 +249,7 @@ async function renderList() {
             Modifier
           </button>
 
-          <button class="btn-delete" onclick="deleteMagasin(${index})">
+          <button class="btn-delete" onclick="deleteMagasin(${realIndex})">
             Supprimer
           </button>
         </div>
