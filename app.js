@@ -8,12 +8,9 @@ const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbxamWQ5gx9ofSAwYMttyOjsju_XSdDgHdTBFtksLkXPH50WPmqp0AYHZAIq0o_KR4ZMyQ/exec";
 
 /***********************************************************
- * VARIABLES GLOBALES
+ * VARIABLES
  ***********************************************************/
-let sortDistance = null; 
-// null = pas de tri
-// "asc" = plus proche → plus loin
-// "desc" = plus loin → plus proche
+let sortDistance = "none"; // "none" | "asc" | "desc"
 
 /***********************************************************
  * CHARGEMENT MAGASINS
@@ -32,7 +29,7 @@ async function loadMagasins() {
     window.magasins = json.data.slice(1).map((row, idx) => ({
       rowIndex: idx,
       data: row,
-      distanceKm: null, 
+      distanceKm: null,
       routeInfo: null
     }));
 
@@ -48,9 +45,8 @@ async function loadMagasins() {
 /***********************************************************
  * UPDATE VISITÉ
  ***********************************************************/
-async function toggleVisite(realIndex, checked) {
-
-  const mag = window.magasins[realIndex];
+async function toggleVisite(index, checked) {
+  const mag = window.magasins[index];
   if (!mag) return;
 
   mag.data[1] = checked;
@@ -68,10 +64,9 @@ async function toggleVisite(realIndex, checked) {
 }
 
 /***********************************************************
- * SUPPRESSION
+ * SUPPRIMER
  ***********************************************************/
 async function deleteMagasin(realIndex) {
-
   const mg = window.magasins[realIndex];
 
   if (!confirm("Supprimer ce magasin ?")) return;
@@ -115,23 +110,10 @@ async function getRoute(lat1, lng1, lat2, lng2) {
 }
 
 /***********************************************************
- * TRI PAR DISTANCE
+ * CHANGEMENT TRI DISTANCE (menu déroulant)
  ***********************************************************/
-function toggleSortDistance() {
-
-  if (sortDistance === null) sortDistance = "asc";
-  else if (sortDistance === "asc") sortDistance = "desc";
-  else sortDistance = null;
-
-  const btn = document.getElementById("sortDistanceBtn");
-
-  if (sortDistance === "asc")
-    btn.innerHTML = `<i class="fa-solid fa-arrow-down-short-wide"></i> Distance`;
-  else if (sortDistance === "desc")
-    btn.innerHTML = `<i class="fa-solid fa-arrow-up-short-wide"></i> Distance`;
-  else
-    btn.innerHTML = `<i class="fa-solid fa-arrows-up-down"></i> Distance`;
-
+function changeSortDistance() {
+  sortDistance = document.getElementById("sortDistanceSelect").value;
   renderList();
 }
 
@@ -160,13 +142,15 @@ function applyFilters(list) {
 
   if (fVisite === "visite") list = list.filter(m => m.data[1] === true);
   if (fVisite === "nonvisite") list = list.filter(m => m.data[1] === false);
-  if (fType !== "all") list = list.filter(m => m.data[3] === fType);
+
+  if (fType !== "all")
+    list = list.filter(m => m.data[3] === fType);
 
   return list;
 }
 
 /***********************************************************
- * AFFICHAGE LISTE + TRI DISTANCE
+ * AFFICHAGE LISTE + TRI PAR DISTANCE
  ***********************************************************/
 async function renderList() {
 
@@ -182,7 +166,7 @@ async function renderList() {
 
     let filtered = applyFilters([...window.magasins]);
 
-    // CALCUL DISTANCE
+    // Calcul distance + stockage
     for (const m of filtered) {
       const lat = m.data[11];
       const lng = m.data[12];
@@ -218,7 +202,7 @@ async function renderList() {
     for (const m of filtered) {
 
       const row = m.data;
-      const realIndex = window.magasins.indexOf(m);
+      const index = window.magasins.indexOf(m);
 
       const card = document.createElement("div");
       card.className = "magasin-card";
@@ -229,7 +213,7 @@ async function renderList() {
 
           <label class="visit-toggle">
             <input type="checkbox" ${row[1] ? "checked" : ""} 
-                   onchange="toggleVisite(${realIndex}, this.checked)">
+                   onchange="toggleVisite(${index}, this.checked)">
             <span>Visité</span>
           </label>
         </div>
@@ -243,13 +227,14 @@ async function renderList() {
         }
 
         <div class="actions">
-          <a href="${wazeLink(row[11], row[12])}" target="_blank" class="btn-waze">Waze</a>
+          <a href="https://waze.com/ul?ll=${row[11]},${row[12]}&navigate=yes"
+             target="_blank" class="btn-waze">Waze</a>
 
           <button class="btn-edit" onclick="goEdit('${row[0]}')">
             Modifier
           </button>
 
-          <button class="btn-delete" onclick="deleteMagasin(${realIndex})">
+          <button class="btn-delete" onclick="deleteMagasin(${index})">
             Supprimer
           </button>
         </div>
