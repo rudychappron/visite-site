@@ -13,37 +13,48 @@ const APPS_SCRIPT_URL =
 let sortDistance = "asc";
 
 /***********************************************************
+ * FORMAT TEMPS (minutes → "X min" ou "XhYY")
+ ***********************************************************/
+function formatTime(min) {
+  if (min < 60) return `${min} min`;
+
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+
+  if (m === 0) return `${h}h00`;
+  if (m < 10) return `${h}h0${m}`;
+
+  return `${h}h${m}`;
+}
+
+/***********************************************************
  * WAZE ULTRA PRÉCIS (Adresse normalisée → fallback GPS)
  ***********************************************************/
 function openWaze(m) {
 
-  // Nettoyage agressif pour éviter les erreurs Waze
   const clean = txt =>
     (txt || "")
-      .normalize("NFKD")               // supprime accents invisibles
-      .replace(/[^\w\s\-\,]/g, "")     // enlève caractères bizarres
-      .replace(/\s{2,}/g, " ")         // supprime doubles espaces
+      .normalize("NFKD")
+      .replace(/[^\w\s\-\,]/g, "")
+      .replace(/\s{2,}/g, " ")
       .trim();
 
-  const rue = clean(m.data[5]);   // Adresse (numéro + rue)
+  const rue = clean(m.data[5]);
   const cp = clean(m.data[6]);
   const ville = clean(m.data[7]);
 
-  // Adresse normalisée
   const adr = `${rue}, ${cp} ${ville}, France`;
   const encoded = encodeURIComponent(adr);
 
-  // Adresse = priorité car plus précise
   let url = `https://waze.com/ul?q=${encoded}&navigate=yes`;
 
-  // Si adresse absente → fallback GPS
   if (!rue || rue.length < 3) {
     const lat = m.data[11];
     const lng = m.data[12];
 
-    if (lat && lng) {
+    if (lat && lng)
       url = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
-    } else {
+    else {
       alert("Aucune adresse ou coordonnée disponible.");
       return;
     }
@@ -123,7 +134,7 @@ async function deleteMagasin(realIndex) {
 }
 
 /***********************************************************
- * API ROUTE HERE
+ * API ROUTE HERE (Distance + Temps)
  ***********************************************************/
 async function getRoute(lat1, lng1, lat2, lng2) {
   if (!lat2 || !lng2) return null;
@@ -153,7 +164,7 @@ async function getRoute(lat1, lng1, lat2, lng2) {
 }
 
 /***********************************************************
- * MENU TRI DISTANCE
+ * TRI DISTANCE
  ***********************************************************/
 function changeSortDistance() {
   sortDistance = document.getElementById("sortDistanceSelect").value;
@@ -193,7 +204,7 @@ function applyFilters(list) {
 }
 
 /***********************************************************
- * COPIE CODE MAGASIN
+ * COPIE CODE
  ***********************************************************/
 function copyCode(code) {
   navigator.clipboard.writeText(code);
@@ -201,7 +212,7 @@ function copyCode(code) {
 }
 
 /***********************************************************
- * AFFICHAGE + TRI
+ * AFFICHAGE
  ***********************************************************/
 async function renderList() {
 
@@ -217,7 +228,6 @@ async function renderList() {
 
     let filtered = applyFilters([...window.magasins]);
 
-    // Distance routing via HERE API
     for (const m of filtered) {
       const lat = m.data[11];
       const lng = m.data[12];
@@ -231,7 +241,6 @@ async function renderList() {
       }
     }
 
-    // TRI
     if (sortDistance === "asc") {
       filtered.sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
     }
@@ -239,7 +248,6 @@ async function renderList() {
       filtered.sort((a, b) => (b.distanceKm ?? -1) - (a.distanceKm ?? -1));
     }
 
-    // AFFICHAGE
     for (const m of filtered) {
 
       const row = m.data;
@@ -268,13 +276,13 @@ async function renderList() {
 
         ${
           m.routeInfo
-          ? `<p class="distance">📍 ${m.routeInfo.km} km | ⏱ ${m.routeInfo.minutes} min</p>`
+          ? `<p class="distance">📍 ${m.routeInfo.km} km | ⏱ ${formatTime(m.routeInfo.minutes)}</p>`
           : `<p class="distance">📍 Distance inconnue</p>`
         }
 
         <div class="actions">
 
-          <button class="btn-waze" onclick="openWaze(m)">
+          <button class="btn-waze" onclick='openWaze(${JSON.stringify(m)})'>
             Waze
           </button>
 
