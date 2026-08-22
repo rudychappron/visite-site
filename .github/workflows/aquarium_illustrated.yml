@@ -1,0 +1,95 @@
+name: Build illustrated aquarium encyclopedia
+
+on:
+  push:
+    branches:
+      - tmp-aquarium-encyclopedia-illustrated
+    paths:
+      - 'aquarium_job/**'
+      - '.github/workflows/aquarium_illustrated.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'aquarium_job/**'
+      - '.github/workflows/aquarium_illustrated.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      - name: Rebuild and verify source package
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat aquarium_job/payload_part_*.b64 | base64 --decode > aquarium_job/payload.tar.xz
+          echo 'a48fca47e224b3ffc00b97517b03e64200c6514cd61abec68b1cdf1e2df0d846  aquarium_job/payload.tar.xz' | sha256sum -c -
+          tar -xJf aquarium_job/payload.tar.xz -C aquarium_job
+          test -s aquarium_job/build_book_v2.py
+          test -s aquarium_job/records_303.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip pymupdf pillow requests
+
+      - name: Build illustrated PDF from internet photo sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p aquarium_job/output aquarium_job/photo_cache
+          python aquarium_job/build_book_v2.py \
+            --records aquarium_job/records_303.json \
+            --output aquarium_job/output/Encyclopedie_pratique_aquarium_303_fiches_illustrees.pdf \
+            --cache aquarium_job/photo_cache \
+            --metadata aquarium_job/output/photo_metadata.json
+          mv build_summary.json aquarium_job/output/build_summary.json
+
+      - name: Validate PDF and render samples
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, pathlib, fitz
+          out = pathlib.Path('aquarium_job/output')
+          pdf = out / 'Encyclopedie_pratique_aquarium_303_fiches_illustrees.pdf'
+          doc = fitz.open(pdf)
+          summary = json.loads((out/'build_summary.json').read_text())
+          assert len(doc) >= 180, len(doc)
+          assert summary['records'] == 303, summary
+          assert summary['photos_exact'] + summary['photos_nearby_or_variant'] >= 250, summary
+          pages = sorted(set([0, 1, 8, 10, min(40,len(doc)-1), min(100,len(doc)-1), min(170,len(doc)-1), len(doc)-1]))
+          renders = out / 'sample_renders'; renders.mkdir(exist_ok=True)
+          for pno in pages:
+              pix = doc[pno].get_pixmap(matrix=fitz.Matrix(1.25,1.25), alpha=False)
+              pix.save(renders/f'page-{pno+1:03d}.png')
+          (out/'validation.txt').write_text(
+              f'PDF pages: {len(doc)}\nRecords: {summary["records"]}\n'
+              f'Exact photos: {summary["photos_exact"]}\n'
+              f'Nearby/variant photos: {summary["photos_nearby_or_variant"]}\n'
+              f'Missing photos: {summary["photos_missing"]}\n', encoding='utf-8')
+          doc.close()
+          PY
+
+      - name: Upload final encyclopedia
+        uses: actions/upload-artifact@v4
+        with:
+          name: encyclopedie-aquarium-illustree
+          path: aquarium_job/output/
+          if-no-files-found: error
+          compression-level: 6
+          retention-days: 7
